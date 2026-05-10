@@ -9,6 +9,10 @@ class CleanerEngine: ObservableObject {
     @Published var isClearing = false
     @Published var items: [CleanItem] = []
     @Published var scanProgress: String = ""
+    // UI helpers for per-tool status and results
+    @Published var currentToolScan: String? = nil
+    @Published var lastToolScan: String? = nil
+    @Published var lastToolCount: Int = 0
 
     struct CleanItem: Identifiable {
         let id = UUID()
@@ -86,6 +90,8 @@ class CleanerEngine: ObservableObject {
     // MARK: - Public
 
     func scan() async {
+        print("[CleanerEngine] scan() called")
+        currentToolScan = "Full Scan"
         isScanning = true
         items = []
         scannedBytes = 0
@@ -120,6 +126,254 @@ class CleanerEngine: ObservableObject {
         scannedBytes = items.reduce(0) { $0 + $1.size }
         scanProgress = ""
         isScanning = false
+        lastToolScan = "Full Scan"
+        lastToolCount = items.count
+        currentToolScan = nil
+    }
+
+    // Convenience public scans that aggregate the more specific private scanners
+    func scanSystemJunk() async {
+        print("[CleanerEngine] scanSystemJunk() called")
+        currentToolScan = "System Junk"
+        isScanning = true
+        items = []
+        scannedBytes = 0
+
+        var found: [CleanItem] = []
+        let tasks: [() async -> [CleanItem]] = [
+            scanUserCaches,
+            scanSystemCaches,
+            scanAppSupportCaches,
+            scanContainerCaches,
+            scanLogs,
+            scanTemp,
+            scanXcode,
+            scanDevTools,
+        ]
+
+        for task in tasks {
+            scanProgress = "System Junk"
+            let result = await task()
+            found += result
+            scannedBytes = found.reduce(0) { $0 + $1.size }
+        }
+
+        items = found.sorted { $0.size > $1.size }
+        scannedBytes = items.reduce(0) { $0 + $1.size }
+        scanProgress = ""
+        isScanning = false
+        lastToolScan = "System Junk"
+        lastToolCount = items.count
+        currentToolScan = nil
+    }
+
+    func scanPrivacyItems() async {
+        print("[CleanerEngine] scanPrivacyItems() called")
+        currentToolScan = "Privacy Items"
+        isScanning = true
+        scanProgress = "Privacy Traces"
+        let found = await scanPrivacyTraces()
+        items = found.sorted { $0.size > $1.size }
+        scannedBytes = items.reduce(0) { $0 + $1.size }
+        scanProgress = ""
+        isScanning = false
+        lastToolScan = "Privacy Items"
+        lastToolCount = items.count
+        currentToolScan = nil
+    }
+
+    func scanMailAttachments() async {
+        print("[CleanerEngine] scanMailAttachments() called")
+        currentToolScan = "Mail Attachments"
+        isScanning = true
+        scanProgress = "Mail Attachments"
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        var found: [CleanItem] = []
+        // Mail downloads and attachments (client caches)
+        found += collectDir(home.appendingPathComponent("Library/Mail"), category: .privacyTrace)
+        // Mail Downloads folder
+        found += collectDir(home.appendingPathComponent("Library/Containers/com.apple.mail/Data/Library/Mail Downloads"), category: .privacyTrace)
+        items = found.sorted { $0.size > $1.size }
+        scannedBytes = items.reduce(0) { $0 + $1.size }
+        scanProgress = ""
+        isScanning = false
+        lastToolScan = "Mail Attachments"
+        lastToolCount = items.count
+        currentToolScan = nil
+    }
+
+    func scaniOSBackups() async {
+        print("[CleanerEngine] scaniOSBackups() called")
+        currentToolScan = "iOS Backups"
+        isScanning = true
+        scanProgress = "iOS Backups"
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        var found: [CleanItem] = []
+        found += collectDir(home.appendingPathComponent("Library/Application Support/MobileSync/Backup"), category: .appLeftovers)
+        items = found.sorted { $0.size > $1.size }
+        scannedBytes = items.reduce(0) { $0 + $1.size }
+        scanProgress = ""
+        isScanning = false
+        lastToolScan = "iOS Backups"
+        lastToolCount = items.count
+        currentToolScan = nil
+    }
+
+    // MARK: - Cloud Drives
+
+    enum CloudService {
+        case iCloud
+        case googleDrive
+        case oneDrive
+        case dropbox
+
+        var displayName: String {
+            switch self {
+            case .iCloud: return "iCloud Drive"
+            case .googleDrive: return "Google Drive"
+            case .oneDrive: return "OneDrive"
+            case .dropbox: return "Dropbox"
+            }
+        }
+    }
+
+    /// Scan common local folders used by cloud sync clients. This is a best-effort
+    /// convenience: it scans the local sync folder (if present) and returns files
+    /// that could be removed. Removing files here will also remove them from the
+    /// synced cloud account if the client syncs deletions.
+    func scanCloud(_ service: CloudService) async {
+        print("[CleanerEngine] scanCloud(\(service.displayName)) called")
+        currentToolScan = service.displayName
+        isScanning = true
+        scanProgress = "Scanning \(service.displayName)"
+        items = []
+        scannedBytes = 0
+
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        var found: [CleanItem] = []
+
+        let candidates: [URL] = {
+            switch service {
+            case .iCloud:
+                return [home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")]
+            case .googleDrive:
+                return [home.appendingPathComponent("Google Drive"), home.appendingPathComponent("Google Drive File Stream")]
+            case .oneDrive:
+                return [home.appendingPathComponent("OneDrive"), home.appendingPathComponent("OneDrive - Personal")]
+            case .dropbox:
+                return [home.appendingPathComponent("Dropbox")]
+            }
+        }()
+
+        for path in candidates {
+            if FileManager.default.fileExists(atPath: path.path) {
+                // collect everything (small files too) so user can inspect and decide
+                found += collectDir(path, category: .largeFile, minSize: 0)
+            }
+        }
+
+        // Sort and publish
+        items = found.sorted { $0.size > $1.size }
+        scannedBytes = items.reduce(0) { $0 + $1.size }
+        scanProgress = ""
+        isScanning = false
+        lastToolScan = service.displayName
+        lastToolCount = items.count
+        currentToolScan = nil
+    }
+
+    /// Scan a specific folder chosen by the user (useful for desktop-app sync folders or custom locations)
+    func scanCloud(folderURL: URL, displayName: String = "Cloud Drive") async {
+        print("[CleanerEngine] scanCloud(folder: \(folderURL.path)) called")
+        currentToolScan = displayName
+        isScanning = true
+        scanProgress = "Scanning \(displayName)"
+        items = []
+        scannedBytes = 0
+
+        var found: [CleanItem] = []
+        found += collectDir(folderURL, category: .largeFile, minSize: 0)
+
+        items = found.sorted { $0.size > $1.size }
+        scannedBytes = items.reduce(0) { $0 + $1.size }
+        scanProgress = ""
+        isScanning = false
+        lastToolScan = displayName
+        lastToolCount = items.count
+        currentToolScan = nil
+    }
+
+    func scanLanguageFiles() async {
+        print("[CleanerEngine] scanLanguageFiles() called")
+        currentToolScan = "Language Files"
+        isScanning = true
+        scanProgress = "Language Files"
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        var found: [CleanItem] = []
+        // Search common locations for .lproj folders inside app bundles / Resources
+        let appDirs = [URL(fileURLWithPath: "/Applications"), home.appendingPathComponent("Applications")]
+        let fm = FileManager.default
+        for dir in appDirs {
+            guard let apps = try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else { continue }
+            for app in apps where app.pathExtension == "app" {
+                let res = app.appendingPathComponent("Contents/Resources")
+                guard let entries = try? fm.contentsOfDirectory(at: res, includingPropertiesForKeys: nil) else { continue }
+                for e in entries where e.pathExtension == "lproj" {
+                    let size = directorySize(e)
+                    if size > 0 { found.append(CleanItem(url: e, size: size, category: .appLeftovers)) }
+                }
+            }
+        }
+        items = found.sorted { $0.size > $1.size }
+        scannedBytes = items.reduce(0) { $0 + $1.size }
+        scanProgress = ""
+        isScanning = false
+        lastToolScan = "Language Files"
+        lastToolCount = items.count
+        currentToolScan = nil
+    }
+
+    func scanExtensions() async {
+        print("[CleanerEngine] scanExtensions() called")
+        currentToolScan = "Extensions"
+        isScanning = true
+        scanProgress = "Extensions & Plugins"
+        var found: [CleanItem] = []
+        let fm = FileManager.default
+        // Internet Plug-Ins
+        found += collectDir(URL(fileURLWithPath: "/Library/Internet Plug-Ins"), category: .appLeftovers)
+        let home = fm.homeDirectoryForCurrentUser
+        found += collectDir(home.appendingPathComponent("Library/Internet Plug-Ins"), category: .appLeftovers)
+        items = found.sorted { $0.size > $1.size }
+        scannedBytes = items.reduce(0) { $0 + $1.size }
+        scanProgress = ""
+        isScanning = false
+        lastToolScan = "Extensions"
+        lastToolCount = items.count
+        currentToolScan = nil
+    }
+
+    // Backup helper: move item to app support backups folder before deleting
+    private func backupItem(_ url: URL) -> URL? {
+        let fm = FileManager.default
+        let appSupport = fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/FreeUp/Backups")
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let destDir = appSupport.appendingPathComponent(timestamp)
+        try? fm.createDirectory(at: destDir, withIntermediateDirectories: true)
+        let dest = destDir.appendingPathComponent(url.lastPathComponent)
+        do {
+            if fm.fileExists(atPath: dest.path) {
+                // if exists, append UUID
+                let unique = destDir.appendingPathComponent(UUID().uuidString + "_" + url.lastPathComponent)
+                try fm.copyItem(at: url, to: unique)
+                return unique
+            } else {
+                try fm.copyItem(at: url, to: dest)
+                return dest
+            }
+        } catch {
+            return nil
+        }
     }
 
     func clearAll() async {
@@ -148,6 +402,8 @@ class CleanerEngine: ObservableObject {
         for item in items {
             if deleteIDs.contains(item.id) {
                 do {
+                    // Backup before deleting
+                    _ = backupItem(item.url)
                     try FileManager.default.removeItem(at: item.url)
                     freed += item.size
                 } catch {
@@ -167,6 +423,7 @@ class CleanerEngine: ObservableObject {
     // MARK: - Login Items
 
     func scanLoginItems() async {
+        print("[CleanerEngine] scanLoginItems() called")
         let home = FileManager.default.homeDirectoryForCurrentUser
         var found: [LoginItem] = []
         let dirs = [
@@ -203,6 +460,7 @@ class CleanerEngine: ObservableObject {
     // MARK: - Launch Agent Protection Scan
 
     func scanLaunchAgents() async {
+        print("[CleanerEngine] scanLaunchAgents() called")
         let home = FileManager.default.homeDirectoryForCurrentUser
         var found: [LaunchAgent] = []
         let dirs = [
@@ -234,7 +492,11 @@ class CleanerEngine: ObservableObject {
 
     func deleteSpaceNode(_ node: SpaceNode) {
         do {
-            try FileManager.default.removeItem(at: node.url)
+            if let _ = backupItem(node.url) {
+                try FileManager.default.removeItem(at: node.url)
+            } else {
+                try FileManager.default.removeItem(at: node.url)
+            }
             freedBytes += node.size
             spaceNodes.removeAll { $0.id == node.id }
             // Also remove from children of any parent
@@ -247,6 +509,8 @@ class CleanerEngine: ObservableObject {
     }
 
     func removeLaunchAgent(_ agent: LaunchAgent) {
+        // Backup the plist before removal
+        _ = backupItem(agent.url)
         try? FileManager.default.removeItem(at: agent.url)
         launchAgents.removeAll { $0.id == agent.id }
     }
@@ -254,6 +518,7 @@ class CleanerEngine: ObservableObject {
     // MARK: - Space Lens
 
     func scanSpaceLens(at path: String = NSHomeDirectory()) async {
+        print("[CleanerEngine] scanSpaceLens() called for path: \(path)")
         isScanning = true
         scanProgress = "Mapping disk..."
         let url = URL(fileURLWithPath: path)
@@ -378,7 +643,7 @@ class CleanerEngine: ObservableObject {
         return result
     }
 
-    private func scanTrash() async -> [CleanItem] {
+    func scanTrash() async -> [CleanItem] {
         let home = FileManager.default.homeDirectoryForCurrentUser
         var result: [CleanItem] = []
         result += collectDir(home.appendingPathComponent(".Trash"), category: .trash)
@@ -392,7 +657,7 @@ class CleanerEngine: ObservableObject {
         return result
     }
 
-    private func scanLargeFiles() async -> [CleanItem] {
+    func scanLargeFiles() async -> [CleanItem] {
         let home = FileManager.default.homeDirectoryForCurrentUser
         var result: [CleanItem] = []
         let threshold: Int64 = 50 * 1024 * 1024 // 50 MB
@@ -402,12 +667,12 @@ class CleanerEngine: ObservableObject {
         return result
     }
 
-    private func scanDownloads() async -> [CleanItem] {
+    func scanDownloads() async -> [CleanItem] {
         let home = FileManager.default.homeDirectoryForCurrentUser
         return collectDir(home.appendingPathComponent("Downloads"), category: .downloads)
     }
 
-    private func scanAppLeftovers() async -> [CleanItem] {
+    func scanAppLeftovers() async -> [CleanItem] {
         let fm = FileManager.default
         let home = fm.homeDirectoryForCurrentUser
         // Find installed app bundle IDs
@@ -449,7 +714,7 @@ class CleanerEngine: ObservableObject {
         return result
     }
 
-    private func scanPrivacyTraces() async -> [CleanItem] {
+    func scanPrivacyTraces() async -> [CleanItem] {
         let home = FileManager.default.homeDirectoryForCurrentUser
         var result: [CleanItem] = []
         // Recent items / LSSharedFileList

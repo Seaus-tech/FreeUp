@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 // MARK: - Tool Card Model
 
@@ -44,6 +45,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     case cloudCleanup = "Cloud Cleanup"
     case myTools      = "My Tools"
     case myActivity   = "My Activity"
+    case aiAssistant  = "AI Assistant"
 
     var id: String { rawValue }
 
@@ -59,6 +61,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return "cloud"
         case .myTools:      return "square.stack.3d.up"
         case .myActivity:   return "chart.line.uptrend.xyaxis"
+        case .aiAssistant:  return "sparkles"
         }
     }
 
@@ -74,6 +77,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return "icloud"
         case .myTools:      return "wrench.and.screwdriver"
         case .myActivity:   return "chart.bar"
+        case .aiAssistant:  return "sparkles"
         }
     }
 
@@ -89,6 +93,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return "Clean up your cloud storage and free up space online."
         case .myTools:      return "Your go-to tools for keeping your Mac clean, safe and running smoothly."
         case .myActivity:   return "Track what FreeUp has cleaned and protected over time."
+        case .aiAssistant:  return "Ask AI to scan, clean, and explain what's on your Mac."
         }
     }
 
@@ -104,6 +109,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return []
         case .myTools:      return []
         case .myActivity:   return []
+        case .aiAssistant:  return []
         }
     }
 
@@ -119,6 +125,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return [Color(hex:"0a2a3a"),Color(hex:"0d4a6b"),Color(hex:"061825")]
         case .myTools:      return [Color(hex:"1e1535"),Color(hex:"2a1f4a"),Color(hex:"150e28")]
         case .myActivity:   return [Color(hex:"0f0f2e"),Color(hex:"1a1a4a"),Color(hex:"0a0a1e")]
+        case .aiAssistant:  return [Color(hex:"1a0a3e"),Color(hex:"2d1060"),Color(hex:"0f0525")]
         }
     }
 
@@ -134,10 +141,11 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return Color(hex:"38bdf8")
         case .myTools:      return Color(hex:"7b5cf0")
         case .myActivity:   return Color(hex:"7b5cf0")
+        case .aiAssistant:  return Color(hex:"a78bfa")
         }
     }
 
-    var isSeparatorBefore: Bool { self == .myTools }
+    var isSeparatorBefore: Bool { self == .myTools || self == .aiAssistant }
 }
 
 // MARK: - ContentView
@@ -160,6 +168,34 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 900, minHeight: 580)
+        .onChange(of: engine.lastToolScan) { _, new in
+            guard let title = new else { return }
+            // Map tool title -> app section and show results
+            switch title {
+            case "Malware Finder":
+                selected = .protection
+                showResults = false
+            case "Login Items", "Background Items":
+                selected = .performance
+                showResults = false
+            case "Large and Old Files", "Downloads", "Similar Images", "Duplicate Finder":
+                selected = .myClutter
+                showResults = true
+            case "System Junk", "Privacy Items", "Trash Bins", "Mail Attachments", "App Leftovers", "Uninstaller":
+                selected = .cleanup
+                showResults = true
+            case "Space Lens":
+                selected = .spaceLens
+                showResults = true
+            // Cloud services should remain in Cloud Cleanup section
+            case let s where s.localizedCaseInsensitiveContains("drive") || s.localizedCaseInsensitiveContains("dropbox") || s.localizedCaseInsensitiveContains("cloud"):
+                selected = .cloudCleanup
+                showResults = true
+            default:
+                selected = .cleanup
+                showResults = true
+            }
+        }
         #else
         mobileView
         #endif
@@ -199,9 +235,10 @@ struct ContentView: View {
     private var mainArea: some View {
         Group {
             switch selected {
-            case .myTools:      MyToolsView(searchText: $searchText)
+            case .myTools:      MyToolsView(searchText: $searchText, engine: engine)
             case .myActivity:   MyActivityView()
-            case .cloudCleanup: CloudCleanupView(accentColor: selected.accentColor)
+            case .aiAssistant:  AIAssistantView(engine: engine)
+            case .cloudCleanup: CloudCleanupView(accentColor: selected.accentColor, engine: engine)
             case .performance:  PerformanceView(engine: engine)
             case .protection:   ProtectionView(engine: engine)
             case .spaceLens:    SpaceLensView(engine: engine)
@@ -224,11 +261,11 @@ struct ContentView: View {
     private var heroView: some View {
         HStack(alignment: .center, spacing: 0) {
             ZStack {
-                if engine.isScanning {
-                    ProgressView().scaleEffect(2).tint(.white)
-                } else {
-                    HeroGem(icon: selected.heroIcon, accent: selected.accentColor)
-                }
+                    if engine.isScanning {
+                            ProgressView().scaleEffect(2).tint(.white)
+                        } else {
+                            HeroGem(section: selected, accent: selected.accentColor)
+                        }
             }
             .frame(maxWidth: .infinity)
 
@@ -337,10 +374,59 @@ struct ContentView: View {
     }
 }
 
+// Simple setup chooser for Google Drive (desktop vs web)
+struct GoogleDriveSetupView: View {
+    let accentColor: Color
+    var onChoice: (String) -> Void
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text("Select Google Drive Setup")
+                .font(.system(size: 20, weight: .semibold))
+                .padding(.top, 12)
+
+            VStack(spacing: 12) {
+                Button(action: { onChoice("desktop") }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "desktopcomputer")
+                            .font(.system(size: 28)).foregroundStyle(accentColor)
+                        VStack(alignment: .leading) {
+                            Text("Google Drive via desktop app").font(.headline).foregroundStyle(.primary)
+                            Text("Select this if you use the desktop app to manage your cloud files on this Mac.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding().background(RoundedRectangle(cornerRadius: 10).fill(Color(NSColor.windowBackgroundColor).opacity(0.06)))
+                }
+
+                Button(action: { onChoice("web") }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "globe")
+                            .font(.system(size: 28)).foregroundStyle(accentColor)
+                        VStack(alignment: .leading) {
+                            Text("Google Drive via web app").font(.headline).foregroundStyle(.primary)
+                            Text("Select this if you don't use the desktop app but want to manage your cloud files in the cloud.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding().background(RoundedRectangle(cornerRadius: 10).fill(Color(NSColor.windowBackgroundColor).opacity(0.06)))
+                }
+            }
+            Spacer()
+            HStack { Spacer(); Button("Cancel") { onChoice("") } }
+        }
+        .padding(20)
+        .frame(width: 620, height: 320)
+    }
+}
+
 // MARK: - My Tools View
 
 struct MyToolsView: View {
     @Binding var searchText: String
+    @ObservedObject var engine: CleanerEngine
     let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
 
     var filtered: [ToolCard] {
@@ -380,8 +466,8 @@ struct MyToolsView: View {
 
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(filtered) { card in
-                        ToolCardView(card: card)
+                        ForEach(filtered) { card in
+                        ToolCardView(card: card, engine: engine)
                     }
                 }
                 .padding(.horizontal, 28)
@@ -393,6 +479,7 @@ struct MyToolsView: View {
 
 struct ToolCardView: View {
     let card: ToolCard
+    @ObservedObject var engine: CleanerEngine
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -420,6 +507,19 @@ struct ToolCardView: View {
                 .padding(.top, 6)
                 .padding(.horizontal, 20)
 
+            // Per-tool status / last result summary
+            HStack(spacing: 8) {
+                if engine.currentToolScan == card.title {
+                    ProgressView().scaleEffect(0.6).tint(.white)
+                    Text("Scanning...").font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                } else if engine.lastToolScan == card.title {
+                    Text("\(engine.lastToolCount) items found").font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 6)
+
             Spacer(minLength: 16)
 
             HStack {
@@ -437,8 +537,43 @@ struct ToolCardView: View {
                     }
                 }
                 Spacer()
-                Button("Scan") {}
-                    .buttonStyle(CardScanButtonStyle())
+                Button("Scan") {
+                    print("[UI] Tool Scan button tapped: \(card.title)")
+                    switch card.title {
+                    case "Privacy Items":
+                        Task { await engine.scanPrivacyItems() }
+                    case "Large and Old Files":
+                        Task { await engine.scanLargeFiles() }
+                    case "System Junk":
+                        Task { await engine.scanSystemJunk() }
+                    case "Malware Finder":
+                        Task { await engine.scanLaunchAgents() }
+                    case "Login Items":
+                        Task { await engine.scanLoginItems() }
+                    case "Downloads":
+                        Task { await engine.scanDownloads() }
+                    case "App Leftovers":
+                        Task { await engine.scanAppLeftovers() }
+                    case "Trash Bins":
+                        Task { await engine.scanTrash() }
+                    case "Mail Attachments":
+                        Task { await engine.scanMailAttachments() }
+                    case "Time Machine Snapshot":
+                        // No destructive action here; list snapshots if possible via a background task
+                        Task { await engine.scan() }
+                    case "Background Items":
+                        Task { await engine.scanLoginItems() }
+                    case "Application Permissions":
+                        // Permissions are managed via system settings; perform a lightweight scan
+                        Task { await engine.scan() }
+                    case "Similar Images", "Duplicate Finder":
+                        // These require specialized algorithms / location picker; fall back to general scan
+                        Task { await engine.scan() }
+                    default:
+                        Task { await engine.scan() }
+                    }
+                }
+                .buttonStyle(CardScanButtonStyle())
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
@@ -452,18 +587,22 @@ struct ToolCardView: View {
 
 struct CloudCleanupView: View {
     let accentColor: Color
+    @ObservedObject var engine: CleanerEngine
 
-    let services: [(icon: String, color: Color, name: String)] = [
-        ("icloud.fill",    Color(hex:"3b82f6"), "Connect iCloud"),
-        ("g.circle.fill",  Color(hex:"ea4335"), "Connect Google Drive"),
-        ("cloud.fill",     Color(hex:"0078d4"), "Connect OneDrive"),
-        ("drop.fill",      Color(hex:"0061ff"), "Connect Dropbox"),
+    @State private var showingGoogleSetup = false
+    @State private var showingServiceComingSoon: (Bool, String) = (false, "")
+
+    let services: [(service: CleanerEngine.CloudService, icon: String, color: Color, name: String)] = [
+        (.iCloud,   "icloud.fill",   Color(hex:"3b82f6"), "Connect iCloud"),
+        (.googleDrive, "g.circle.fill", Color(hex:"ea4335"), "Connect Google Drive"),
+        (.oneDrive,  "cloud.fill",    Color(hex:"0078d4"), "Connect OneDrive"),
+        (.dropbox,   "drop.fill",     Color(hex:"0061ff"), "Connect Dropbox"),
     ]
 
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
             VStack(spacing: 0) {
-                HeroGem(icon: "icloud", accent: accentColor)
+                HeroGem(section: .cloudCleanup, accent: accentColor)
                 Text("Secure connection")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.5))
@@ -483,7 +622,17 @@ struct CloudCleanupView: View {
                 }
                 VStack(spacing: 12) {
                     ForEach(services, id: \.name) { svc in
-                        Button(action: {}) {
+                        Button(action: {
+                            // For Google Drive prefer showing the setup chooser (desktop vs web)
+                            if svc.service == .googleDrive {
+                                showingGoogleSetup = true
+                                return
+                            }
+                            // Trigger a best-effort local scan of the cloud sync folder
+                            Task {
+                                await engine.scanCloud(svc.service)
+                            }
+                        }) {
                             HStack(spacing: 14) {
                                 Image(systemName: svc.icon)
                                     .font(.system(size: 18))
@@ -493,6 +642,9 @@ struct CloudCleanupView: View {
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(.white)
                                 Spacer()
+                                if engine.isScanning && engine.currentToolScan == svc.service.displayName {
+                                    ProgressView().tint(.white).scaleEffect(0.8)
+                                }
                             }
                             .padding(.horizontal, 18)
                             .padding(.vertical, 14)
@@ -500,8 +652,52 @@ struct CloudCleanupView: View {
                         }
                         .buttonStyle(.plain)
                         .frame(maxWidth: 280)
+                        .disabled(engine.isScanning)
                     }
                 }
+
+                // Google Drive setup modal (desktop app vs web app)
+                .sheet(isPresented: $showingGoogleSetup) {
+                    GoogleDriveSetupView(accentColor: accentColor) { choice in
+                        // choice: "desktop" or "web"
+                        if choice == "desktop" {
+                            // Present folder picker and scan selected folder
+                            let panel = NSOpenPanel()
+                            panel.canChooseDirectories = true
+                            panel.canChooseFiles = false
+                            panel.allowsMultipleSelection = false
+                            panel.title = "Select your Google Drive folder"
+                            panel.begin { resp in
+                                guard resp == .OK, let url = panel.urls.first else { return }
+                                Task { await engine.scanCloud(folderURL: url, displayName: "Google Drive (custom)") }
+                            }
+                        } else {
+                            // Web/API flow - not implemented yet; show a temporary message
+                            showingServiceComingSoon = (true, "Google Drive (web)")
+                        }
+                        showingGoogleSetup = false
+                    }
+                }
+
+                // Simple alert for services that require OAuth (placeholder)
+                .alert(isPresented: $showingServiceComingSoon.0) {
+                    Alert(title: Text("Coming soon"), message: Text("Remote/cloud API integration for \(showingServiceComingSoon.1) is not yet implemented. I can implement OAuth flows next if you want."), dismissButton: .default(Text("OK")))
+                }
+
+                // If the engine has results from a cloud scan, show a quick action
+                if !engine.items.isEmpty && engine.lastToolScan?.contains("Drive") == true || engine.lastToolScan == "iCloud Drive" || engine.lastToolScan == "Dropbox" {
+                    HStack {
+                        Text("\(engine.items.count) items · \(engine.scannedBytes.formatted(.byteCount(style: .file)))")
+                            .font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                        Spacer()
+                        Button("Clean All") { Task { await engine.clearAll() } }
+                            .buttonStyle(PillButtonStyle(color: accentColor))
+                            .disabled(engine.isClearing)
+                    }
+                    .frame(maxWidth: 280)
+                    .padding(.top, 8)
+                }
+
                 Spacer()
             }
             .frame(width: 320)
@@ -713,10 +909,40 @@ private struct SidebarItem: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: section.sidebarIcon)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(isSelected ? .white : .white.opacity(0.55))
-                .frame(width: 20)
+            // Use custom FreeUp icons for primary sections; fall back to SF Symbols for anything else
+            Group {
+                if section == .smartCare {
+                    FreeUpLogoView(accent: isSelected ? .white : section.accentColor)
+                        .frame(width: 18, height: 18)
+                } else if section == .protection {
+                    IconShield(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .cleanup {
+                    IconTrash(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .performance {
+                    IconGear(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .applications {
+                    IconFolder(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .myClutter {
+                    IconFolder(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .spaceLens {
+                    IconSparkle(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .cloudCleanup {
+                    IconDownload(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .myTools {
+                    IconGear(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .myActivity {
+                    IconSparkle(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .aiAssistant {
+                    IconSparkle(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else {
+                    Image(systemName: section.sidebarIcon)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(isSelected ? .white : .white.opacity(0.55))
+                        .frame(width: 20)
+                }
+            }
+            .frame(width: 20)
+
             Text(section.rawValue)
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
                 .foregroundStyle(isSelected ? .white : .white.opacity(0.65))
@@ -733,7 +959,7 @@ private struct SidebarItem: View {
 }
 
 private struct HeroGem: View {
-    let icon: String
+    let section: AppSection
     let accent: Color
 
     var body: some View {
@@ -750,9 +976,33 @@ private struct HeroGem: View {
                         .stroke(LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
                 )
                 .shadow(color: accent.opacity(0.5), radius: 40, y: 20)
-            Image(systemName: icon)
-                .font(.system(size: 80, weight: .thin))
-                .foregroundStyle(.white.opacity(0.9))
+
+            // Use FreeUp custom icons for the main hero when available
+            switch section {
+            case .smartCare:
+                FreeUpLogoView(accent: accent)
+                    .frame(width: 140, height: 140)
+            case .protection:
+                IconShield(accent: .white).frame(width: 120, height: 120)
+            case .cleanup:
+                IconTrash(accent: .white).frame(width: 120, height: 120)
+            case .performance:
+                IconGear(accent: .white).frame(width: 120, height: 120)
+            case .applications:
+                IconFolder(accent: .white).frame(width: 120, height: 120)
+            case .myClutter:
+                IconFolder(accent: .white).frame(width: 120, height: 120)
+            case .spaceLens:
+                IconSparkle(accent: .white).frame(width: 120, height: 120)
+            case .cloudCleanup:
+                IconDownload(accent: .white).frame(width: 120, height: 120)
+            case .myTools:
+                IconGear(accent: .white).frame(width: 120, height: 120)
+            case .myActivity:
+                IconSparkle(accent: .white).frame(width: 120, height: 120)
+            case .aiAssistant:
+                IconSparkle(accent: .white).frame(width: 120, height: 120)
+            }
         }
     }
 }
