@@ -1,0 +1,172 @@
+// Tools/generate_icns.swift
+// Renders FreeUp app icon PNGs into Assets.xcassets/AppIcon.appiconset
+// NEW: draws a stylized disk (hard drive / disk platter) with sparkles
+// NOT part of the app target — run manually from project root:
+//   cd /Users/YashB/Seaus/FreeUp/FreeUp/FreeUp
+//   swift Tools/generate_icns.swift
+
+import AppKit
+import CoreGraphics
+
+func diskPath(in size: CGFloat) -> CGPath {
+    let path = CGMutablePath()
+    let cx = size * 0.5
+    let cy = size * 0.5
+    let r = size * 0.42
+    path.addEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+    return path
+}
+
+func sparklePath(center: CGPoint, r: CGFloat) -> CGPath {
+    let p = CGMutablePath()
+    // simple four-point sparkle (diamond) with subtle arms
+    p.move(to: CGPoint(x: center.x, y: center.y - r))
+    p.addLine(to: CGPoint(x: center.x + r * 0.25, y: center.y - r * 0.25))
+    p.addLine(to: CGPoint(x: center.x + r, y: center.y))
+    p.addLine(to: CGPoint(x: center.x + r * 0.25, y: center.y + r * 0.25))
+    p.addLine(to: CGPoint(x: center.x, y: center.y + r))
+    p.addLine(to: CGPoint(x: center.x - r * 0.25, y: center.y + r * 0.25))
+    p.addLine(to: CGPoint(x: center.x - r, y: center.y))
+    p.addLine(to: CGPoint(x: center.x - r * 0.25, y: center.y - r * 0.25))
+    p.closeSubpath()
+    return p
+}
+
+func renderIcon(size: Int) -> NSImage {
+    let s = CGFloat(size)
+    let image = NSImage(size: NSSize(width: s, height: s))
+    image.lockFocus()
+    guard let ctx = NSGraphicsContext.current?.cgContext else { image.unlockFocus(); return image }
+    // flip coordinate system to top-left origin like CoreGraphics drawing in original
+    ctx.translateBy(x: 0, y: s); ctx.scaleBy(x: 1, y: -1)
+
+    let rect = CGRect(x: 0, y: 0, width: s, height: s)
+    let bgPath = CGPath(roundedRect: rect, cornerWidth: s * 0.18, cornerHeight: s * 0.18, transform: nil)
+    ctx.addPath(bgPath); ctx.clip()
+
+    // background gradient (cool, moody)
+    let bgGradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [
+        CGColor(red: 0.06, green: 0.08, blue: 0.12, alpha: 1),
+        CGColor(red: 0.10, green: 0.06, blue: 0.22, alpha: 1)
+    ] as CFArray, locations: [0, 1])!
+    ctx.drawLinearGradient(bgGradient, start: CGPoint(x: 0, y: 0), end: CGPoint(x: s, y: s), options: [])
+
+    // draw disk (platter)
+    let cx = s * 0.5, cy = s * 0.5
+    let outerR = s * 0.36
+    // outer rim
+    ctx.saveGState()
+    let rimPath = diskPath(in: s * 0.92)
+    ctx.addPath(rimPath)
+    let rimGradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [
+        CGColor(red: 0.18, green: 0.18, blue: 0.22, alpha: 1),
+        CGColor(red: 0.06, green: 0.06, blue: 0.08, alpha: 1)
+    ] as CFArray, locations: [0, 1])!
+    ctx.drawRadialGradient(rimGradient, startCenter: CGPoint(x: cx, y: cy), startRadius: outerR * 0.6, endCenter: CGPoint(x: cx, y: cy), endRadius: outerR, options: [])
+    ctx.restoreGState()
+
+    // shiny central platter with subtle radial highlight
+    ctx.saveGState()
+    let platterRect = CGRect(x: cx - outerR * 0.9, y: cy - outerR * 0.9, width: outerR * 1.8, height: outerR * 1.8)
+    let platterPath = CGPath(ellipseIn: platterRect, transform: nil)
+    ctx.addPath(platterPath)
+    let platterGrad = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: [
+        CGColor(red: 0.95, green: 0.97, blue: 1.0, alpha: 0.06),
+        CGColor(red: 0.6, green: 0.7, blue: 0.85, alpha: 0.12),
+        CGColor(red: 0.12, green: 0.14, blue: 0.18, alpha: 0.9)
+    ] as CFArray, locations: [0, 0.25, 1])!
+    ctx.drawRadialGradient(platterGrad, startCenter: CGPoint(x: cx - outerR * 0.25, y: cy - outerR * 0.25), startRadius: outerR * 0.05, endCenter: CGPoint(x: cx, y: cy), endRadius: outerR * 1.0, options: [])
+    ctx.restoreGState()
+
+    // small spindle hole
+    ctx.setFillColor(CGColor(red: 0.04, green: 0.04, blue: 0.04, alpha: 1))
+    let holeR = outerR * 0.12
+    ctx.fillEllipse(in: CGRect(x: cx - holeR, y: cy - holeR, width: holeR * 2, height: holeR * 2))
+
+    // reflective band across the disk
+    ctx.saveGState()
+    ctx.setBlendMode(.screen)
+    let bandPath = CGPath(roundedRect: CGRect(x: cx - outerR, y: cy + outerR * 0.15, width: outerR * 2, height: outerR * 0.18), cornerWidth: outerR * 0.09, cornerHeight: outerR * 0.09, transform: nil)
+    ctx.addPath(bandPath)
+    ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 0.08))
+    ctx.fillPath()
+    ctx.restoreGState()
+
+    // sparkles (3 of varying sizes, bright)
+    ctx.saveGState()
+    let sparkleColor = CGColor(red: 1.0, green: 0.94, blue: 0.6, alpha: 0.95)
+    ctx.setFillColor(sparkleColor)
+    let s1 = sparklePath(center: CGPoint(x: cx + outerR * 0.5, y: cy - outerR * 0.3), r: outerR * 0.12)
+    ctx.addPath(s1); ctx.fillPath()
+    let s2 = sparklePath(center: CGPoint(x: cx - outerR * 0.45, y: cy - outerR * 0.1), r: outerR * 0.07)
+    ctx.addPath(s2); ctx.fillPath()
+    let s3 = sparklePath(center: CGPoint(x: cx + outerR * 0.05, y: cy + outerR * 0.6), r: outerR * 0.06)
+    ctx.addPath(s3); ctx.fillPath()
+    ctx.restoreGState()
+
+    // subtle outer glow
+    ctx.saveGState()
+    ctx.setShadow(offset: CGSize(width: 0, height: 0), blur: s * 0.018, color: CGColor(red: 0.2, green: 0.34, blue: 0.9, alpha: 0.12))
+    ctx.addEllipse(in: CGRect(x: cx - outerR, y: cy - outerR, width: outerR * 2, height: outerR * 2))
+    ctx.setStrokeColor(CGColor(red: 0, green: 0, blue: 0, alpha: 0))
+    ctx.setLineWidth(0)
+    ctx.strokePath()
+    ctx.restoreGState()
+
+    image.unlockFocus()
+    return image
+}
+
+func savePNG(_ image: NSImage, to path: String, pixelSize: Int) {
+    // Render the provided NSImage into an offscreen bitmap with exact pixel dimensions
+    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixelSize, pixelsHigh: pixelSize,
+                                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                                colorSpaceName: NSColorSpaceName.deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+    let ctx = NSGraphicsContext(bitmapImageRep: rep!)
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = ctx
+    // Draw the image stretched to the target pixel size
+    image.draw(in: NSRect(x: 0, y: 0, width: pixelSize, height: pixelSize), from: NSZeroRect, operation: .sourceOver, fraction: 1.0)
+    ctx?.flushGraphics()
+    NSGraphicsContext.restoreGraphicsState()
+
+    if let png = rep?.representation(using: .png, properties: [:]) {
+        do {
+            try png.write(to: URL(fileURLWithPath: path))
+            print("✅ \(path)")
+        } catch {
+            print("❌ \(path): \(error)")
+        }
+    } else {
+        print("❌ \(path): failed to encode PNG")
+    }
+}
+
+func main() {
+    let assetDir = "./Assets.xcassets/AppIcon.appiconset"
+    let sizes = [(16,"icon_16"),(32,"icon_32"),(64,"icon_64"),(128,"icon_128"),(256,"icon_256"),(512,"icon_512"),(1024,"icon_1024")]
+    for (sz, name) in sizes { let img = renderIcon(size: sz); savePNG(img, to: "\(assetDir)/\(name).png", pixelSize: sz) }
+
+    let contents = """
+    {
+      "images" : [
+        { "filename" : "icon_1024.png", "idiom" : "universal", "platform" : "ios", "size" : "1024x1024" },
+        { "filename" : "icon_16.png",   "idiom" : "mac", "scale" : "1x", "size" : "16x16" },
+        { "filename" : "icon_32.png",   "idiom" : "mac", "scale" : "2x", "size" : "16x16" },
+        { "filename" : "icon_32.png",   "idiom" : "mac", "scale" : "1x", "size" : "32x32" },
+        { "filename" : "icon_64.png",   "idiom" : "mac", "scale" : "2x", "size" : "32x32" },
+        { "filename" : "icon_128.png",  "idiom" : "mac", "scale" : "1x", "size" : "128x128" },
+        { "filename" : "icon_256.png",  "idiom" : "mac", "scale" : "2x", "size" : "128x128" },
+        { "filename" : "icon_256.png",  "idiom" : "mac", "scale" : "1x", "size" : "256x256" },
+        { "filename" : "icon_512.png",  "idiom" : "mac", "scale" : "2x", "size" : "256x256" },
+        { "filename" : "icon_512.png",  "idiom" : "mac", "scale" : "1x", "size" : "512x512" },
+        { "filename" : "icon_1024.png", "idiom" : "mac", "scale" : "2x", "size" : "512x512" }
+      ],
+      "info" : { "author" : "xcode", "version" : 1 }
+    }
+    """
+    try! contents.write(toFile: "\(assetDir)/Contents.json", atomically: true, encoding: .utf8)
+    print("✅ Contents.json updated")
+}
+
+main()

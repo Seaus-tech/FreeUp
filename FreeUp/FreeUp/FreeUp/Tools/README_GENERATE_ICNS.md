@@ -16,7 +16,7 @@ cd /Users/YashB/Seaus/FreeUp/FreeUp/FreeUp
 2. Run the script directly with the system swift interpreter:
 
 ```bash
-swift Tools/generate_icns.swift
+swift Tools/generate_icns.swift.disabled
 ```
 
 Alternatively compile and run the small binary:
