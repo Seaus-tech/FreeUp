@@ -32,10 +32,9 @@ struct OrganizedClean {
                 map[.cleanup]?.append(item)
             case .loginItems:
                 map[.performance]?.append(item)
-            default:
-                // Fallback: if the filename or path contains cloud folder names, treat as cloudCleanup
+            @unknown default:
                 let lower = item.url.path.lowercased()
-                if lower.contains("google drive") || lower.contains("dropbox") || lower.contains("icloud") || lower.contains("oneDrive".lowercased()) || lower.contains("cloud") {
+                if lower.contains("google drive") || lower.contains("dropbox") || lower.contains("icloud") || lower.contains("cloud") {
                     map[.cloudCleanup]?.append(item)
                 } else {
                     map[.other]?.append(item)
