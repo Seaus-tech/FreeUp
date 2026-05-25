@@ -1,4 +1,5 @@
-#!/usr/bin/swift
+// Run manually with: swift -D FREEUP_ICON_SCRIPT generate_icns.swift
+#if os(macOS)
 import Foundation
 import AppKit
 import SwiftUI
@@ -141,7 +142,13 @@ func main() async throws {
     if task.terminationStatus == 0 { print("Created FreeUp.icns") } else { print("iconutil failed with status \(task.terminationStatus)") }
 }
 
-import AppKit
-let app = NSApplication.shared
-Task { try? await main() ; NSApp.terminate(nil) }
-app.run()
+@MainActor
+func runIconGeneratorScript() {
+    let app = NSApplication.shared
+    Task {
+        try? await main()
+        NSApp.terminate(nil)
+    }
+    app.run()
+}
+#endif

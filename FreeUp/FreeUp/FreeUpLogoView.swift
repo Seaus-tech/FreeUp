@@ -27,7 +27,7 @@ struct FreeUpLogoView: View {
                 // small star sparkle
                 Group {
                     Circle().fill(Color.white.opacity(0.9)).frame(width: w * 0.06, height: w * 0.06).offset(x: -w * 0.18, y: -w * 0.24)
-                    Image(systemName: "sparkles").font(.system(size: w * 0.12)).foregroundStyle(Color.white.opacity(0.9)).offset(x: w * 0.22, y: -w * 0.22)
+                    Image(systemName: "sparkles").font(.system(size: w * 0.12)).foregroundColor(Color.white.opacity(0.9)).offset(x: w * 0.22, y: -w * 0.22)
                 }
             }
             .frame(width: w, height: w)

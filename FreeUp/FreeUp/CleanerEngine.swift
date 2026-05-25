@@ -249,26 +249,12 @@ class CleanerEngine: ObservableObject {
         items = []
         scannedBytes = 0
 
-        let home = FileManager.default.homeDirectoryForCurrentUser
         var found: [CleanItem] = []
-
-        let candidates: [URL] = {
-            switch service {
-            case .iCloud:
-                return [home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs")]
-            case .googleDrive:
-                return [home.appendingPathComponent("Google Drive"), home.appendingPathComponent("Google Drive File Stream")]
-            case .oneDrive:
-                return [home.appendingPathComponent("OneDrive"), home.appendingPathComponent("OneDrive - Personal")]
-            case .dropbox:
-                return [home.appendingPathComponent("Dropbox")]
-            }
-        }()
+        let candidates = cloudFolderCandidates(for: service)
 
         for path in candidates {
             if FileManager.default.fileExists(atPath: path.path) {
-                // collect everything (small files too) so user can inspect and decide
-                found += collectDir(path, category: .largeFile, minSize: 0)
+                found += collectDir(path, category: .largeFile, minSize: cloudCleanupMinimumFileSize)
             }
         }
 
@@ -292,7 +278,7 @@ class CleanerEngine: ObservableObject {
         scannedBytes = 0
 
         var found: [CleanItem] = []
-        found += collectDir(folderURL, category: .largeFile, minSize: 0)
+        found += collectDir(folderURL, category: .largeFile, minSize: cloudCleanupMinimumFileSize)
 
         items = found.sorted { $0.size > $1.size }
         scannedBytes = items.reduce(0) { $0 + $1.size }
@@ -732,6 +718,48 @@ class CleanerEngine: ObservableObject {
     }
 
     // MARK: - Helpers
+
+    private var cloudCleanupMinimumFileSize: Int64 {
+        10 * 1024 * 1024
+    }
+
+    private func cloudFolderCandidates(for service: CloudService) -> [URL] {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let cloudStorage = home.appendingPathComponent("Library/CloudStorage")
+        var candidates: [URL] = []
+
+        switch service {
+        case .iCloud:
+            candidates.append(home.appendingPathComponent("Library/Mobile Documents/com~apple~CloudDocs"))
+            candidates.append(cloudStorage.appendingPathComponent("iCloud Drive"))
+        case .googleDrive:
+            candidates.append(home.appendingPathComponent("Google Drive"))
+            candidates.append(home.appendingPathComponent("Google Drive File Stream"))
+            candidates.append(contentsOf: contentsOfCloudStorage(matching: ["GoogleDrive", "Google Drive"]))
+        case .oneDrive:
+            candidates.append(home.appendingPathComponent("OneDrive"))
+            candidates.append(home.appendingPathComponent("OneDrive - Personal"))
+            candidates.append(contentsOf: contentsOfCloudStorage(matching: ["OneDrive"]))
+        case .dropbox:
+            candidates.append(home.appendingPathComponent("Dropbox"))
+            candidates.append(contentsOf: contentsOfCloudStorage(matching: ["Dropbox"]))
+        }
+
+        return Array(Set(candidates.map(\.standardizedFileURL)))
+    }
+
+    private func contentsOfCloudStorage(matching tokens: [String]) -> [URL] {
+        let cloudStorage = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/CloudStorage")
+        guard let folders = try? FileManager.default.contentsOfDirectory(at: cloudStorage, includingPropertiesForKeys: nil) else {
+            return []
+        }
+
+        return folders.filter { folder in
+            tokens.contains { token in
+                folder.lastPathComponent.localizedCaseInsensitiveContains(token)
+            }
+        }
+    }
 
     private func collectDir(_ dir: URL, category: CleanItem.Category, minSize: Int64 = 0) -> [CleanItem] {
         let fm = FileManager.default
