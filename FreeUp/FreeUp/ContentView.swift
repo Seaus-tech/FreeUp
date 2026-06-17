@@ -424,7 +424,7 @@ struct GoogleDriveSetupView: View {
                         }
                         Spacer()
                     }
-                    .padding().background(RoundedRectangle(cornerRadius: 10).fill(Color(NSColor.windowBackgroundColor).opacity(0.06)))
+                    .padding().background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.06)))
                 }
 
                 Button(action: { onChoice("web") }) {
@@ -438,7 +438,7 @@ struct GoogleDriveSetupView: View {
                         }
                         Spacer()
                     }
-                    .padding().background(RoundedRectangle(cornerRadius: 10).fill(Color(NSColor.windowBackgroundColor).opacity(0.06)))
+                    .padding().background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.06)))
                 }
             }
             Spacer()
@@ -2091,3 +2091,4 @@ struct SpaceNodeRow: View {
 }
 
 #Preview { ContentView() }
+

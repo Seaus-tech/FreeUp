@@ -14,6 +14,14 @@ class CleanerEngine: ObservableObject {
     @Published var lastToolScan: String? = nil
     @Published var lastToolCount: Int = 0
 
+    private var homeDirectoryURL: URL {
+        #if os(macOS)
+        return FileManager.default.homeDirectoryForCurrentUser
+        #else
+        return URL(fileURLWithPath: NSHomeDirectory())
+        #endif
+    }
+
     struct CleanItem: Identifiable {
         let id = UUID()
         let url: URL
@@ -187,7 +195,7 @@ class CleanerEngine: ObservableObject {
         currentToolScan = "Mail Attachments"
         isScanning = true
         scanProgress = "Mail Attachments"
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var found: [CleanItem] = []
         // Mail downloads and attachments (client caches)
         found += collectDir(home.appendingPathComponent("Library/Mail"), category: .privacyTrace)
@@ -207,7 +215,7 @@ class CleanerEngine: ObservableObject {
         currentToolScan = "iOS Backups"
         isScanning = true
         scanProgress = "iOS Backups"
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var found: [CleanItem] = []
         found += collectDir(home.appendingPathComponent("Library/Application Support/MobileSync/Backup"), category: .appLeftovers)
         items = found.sorted { $0.size > $1.size }
@@ -294,7 +302,7 @@ class CleanerEngine: ObservableObject {
         currentToolScan = "Language Files"
         isScanning = true
         scanProgress = "Language Files"
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var found: [CleanItem] = []
         // Search common locations for .lproj folders inside app bundles / Resources
         let appDirs = [URL(fileURLWithPath: "/Applications"), home.appendingPathComponent("Applications")]
@@ -328,7 +336,7 @@ class CleanerEngine: ObservableObject {
         let fm = FileManager.default
         // Internet Plug-Ins
         found += collectDir(URL(fileURLWithPath: "/Library/Internet Plug-Ins"), category: .appLeftovers)
-        let home = fm.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         found += collectDir(home.appendingPathComponent("Library/Internet Plug-Ins"), category: .appLeftovers)
         items = found.sorted { $0.size > $1.size }
         scannedBytes = items.reduce(0) { $0 + $1.size }
@@ -342,7 +350,7 @@ class CleanerEngine: ObservableObject {
     // Backup helper: move item to app support backups folder before deleting
     private func backupItem(_ url: URL) -> URL? {
         let fm = FileManager.default
-        let appSupport = fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/FreeUp/Backups")
+        let appSupport = homeDirectoryURL.appendingPathComponent("Library/Application Support/FreeUp/Backups")
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let destDir = appSupport.appendingPathComponent(timestamp)
         try? fm.createDirectory(at: destDir, withIntermediateDirectories: true)
@@ -410,7 +418,7 @@ class CleanerEngine: ObservableObject {
 
     func scanLoginItems() async {
         print("[CleanerEngine] scanLoginItems() called")
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var found: [LoginItem] = []
         let dirs = [
             home.appendingPathComponent("Library/LaunchAgents"),
@@ -432,22 +440,30 @@ class CleanerEngine: ObservableObject {
     }
 
     func toggleLoginItem(_ item: LoginItem) {
+#if os(macOS)
         guard let idx = loginItems.firstIndex(where: { $0.id == item.id }),
               let plist = loginItems[idx].plistURL else { return }
         let enable = !loginItems[idx].enabled
+        // launchctl is only available on macOS; use Process to toggle the agent
         let task = Process()
         task.launchPath = "/bin/launchctl"
         task.arguments = [enable ? "load" : "unload", "-w", plist.path]
         try? task.run()
         task.waitUntilExit()
         loginItems[idx].enabled = enable
+#else
+        // Not supported on this platform; just flip the local flag so UI remains responsive
+        if let idx = loginItems.firstIndex(where: { $0.id == item.id }) {
+            loginItems[idx].enabled.toggle()
+        }
+#endif
     }
 
     // MARK: - Launch Agent Protection Scan
 
     func scanLaunchAgents() async {
         print("[CleanerEngine] scanLaunchAgents() called")
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var found: [LaunchAgent] = []
         let dirs = [
             home.appendingPathComponent("Library/LaunchAgents"),
@@ -535,7 +551,7 @@ class CleanerEngine: ObservableObject {
     // MARK: - Scanners
 
     private func scanUserCaches() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         return collectDir(home.appendingPathComponent("Library/Caches"), category: .userCache)
     }
 
@@ -547,7 +563,7 @@ class CleanerEngine: ObservableObject {
     }
 
     private func scanAppSupportCaches() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         let appSupport = home.appendingPathComponent("Library/Application Support")
         var result: [CleanItem] = []
         let fm = FileManager.default
@@ -562,7 +578,7 @@ class CleanerEngine: ObservableObject {
     }
 
     private func scanContainerCaches() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var result: [CleanItem] = []
         for base in ["Library/Containers", "Library/Group Containers"] {
             let dir = home.appendingPathComponent(base)
@@ -577,7 +593,7 @@ class CleanerEngine: ObservableObject {
     }
 
     private func scanLogs() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var result: [CleanItem] = []
         result += collectDir(home.appendingPathComponent("Library/Logs"), category: .logs)
         result += collectDir(URL(fileURLWithPath: "/Library/Logs"), category: .logs)
@@ -593,7 +609,7 @@ class CleanerEngine: ObservableObject {
     }
 
     private func scanXcode() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         let dev = home.appendingPathComponent("Library/Developer")
         var result: [CleanItem] = []
         // DerivedData — biggest offender
@@ -609,7 +625,7 @@ class CleanerEngine: ObservableObject {
     }
 
     private func scanDevTools() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var result: [CleanItem] = []
         let devCaches: [String] = [
             ".npm/_cacache",
@@ -630,7 +646,7 @@ class CleanerEngine: ObservableObject {
     }
 
     func scanTrash() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var result: [CleanItem] = []
         result += collectDir(home.appendingPathComponent(".Trash"), category: .trash)
         // External volume trashes
@@ -644,7 +660,7 @@ class CleanerEngine: ObservableObject {
     }
 
     func scanLargeFiles() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var result: [CleanItem] = []
         let threshold: Int64 = 50 * 1024 * 1024 // 50 MB
         for dir in ["Documents", "Desktop", "Movies", "Music"] {
@@ -654,13 +670,13 @@ class CleanerEngine: ObservableObject {
     }
 
     func scanDownloads() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         return collectDir(home.appendingPathComponent("Downloads"), category: .downloads)
     }
 
     func scanAppLeftovers() async -> [CleanItem] {
         let fm = FileManager.default
-        let home = fm.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         // Find installed app bundle IDs
         var installedIDs = Set<String>()
         let appDirs = ["/Applications", home.appendingPathComponent("Applications").path]
@@ -701,7 +717,7 @@ class CleanerEngine: ObservableObject {
     }
 
     func scanPrivacyTraces() async -> [CleanItem] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         var result: [CleanItem] = []
         // Recent items / LSSharedFileList
         result += collectDir(home.appendingPathComponent("Library/Application Support/com.apple.sharedfilelist"), category: .privacyTrace)
@@ -724,7 +740,7 @@ class CleanerEngine: ObservableObject {
     }
 
     private func cloudFolderCandidates(for service: CloudService) -> [URL] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = homeDirectoryURL
         let cloudStorage = home.appendingPathComponent("Library/CloudStorage")
         var candidates: [URL] = []
 
@@ -749,7 +765,7 @@ class CleanerEngine: ObservableObject {
     }
 
     private func contentsOfCloudStorage(matching tokens: [String]) -> [URL] {
-        let cloudStorage = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/CloudStorage")
+        let cloudStorage = homeDirectoryURL.appendingPathComponent("Library/CloudStorage")
         guard let folders = try? FileManager.default.contentsOfDirectory(at: cloudStorage, includingPropertiesForKeys: nil) else {
             return []
         }
@@ -839,3 +855,4 @@ class CleanerEngine: ObservableObject {
         return nodes.sorted { $0.size > $1.size }
     }
 }
+
