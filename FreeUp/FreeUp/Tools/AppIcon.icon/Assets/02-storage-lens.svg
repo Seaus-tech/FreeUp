@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="ring" x1="228" y1="202" x2="780" y2="822" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F8FAFC" stop-opacity="0.88"/>
+      <stop offset="0.42" stop-color="#67E8F9" stop-opacity="0.56"/>
+      <stop offset="1" stop-color="#A78BFA" stop-opacity="0.68"/>
+    </linearGradient>
+    <linearGradient id="disk" x1="314" y1="286" x2="706" y2="736" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.34"/>
+      <stop offset="0.6" stop-color="#38BDF8" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#0F172A" stop-opacity="0.10"/>
+    </linearGradient>
+  </defs>
+  <circle cx="512" cy="510" r="286" fill="none" stroke="url(#ring)" stroke-width="54"/>
+  <circle cx="512" cy="510" r="214" fill="url(#disk)"/>
+  <path d="M328 514c60-74 118-108 180-108 58 0 108 30 156 90" fill="none" stroke="#E0F2FE" stroke-opacity="0.72" stroke-width="34" stroke-linecap="round"/>
+  <path d="M326 612c66 44 128 66 188 66 64 0 126-22 188-66" fill="none" stroke="#5EEAD4" stroke-opacity="0.66" stroke-width="30" stroke-linecap="round"/>
+  <circle cx="512" cy="510" r="72" fill="#F8FAFC" fill-opacity="0.88"/>
+  <circle cx="512" cy="510" r="34" fill="#14B8A6" fill-opacity="0.92"/>
+</svg>

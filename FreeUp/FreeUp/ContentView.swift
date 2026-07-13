@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 // MARK: - Tool Card Model
 
@@ -44,6 +47,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     case cloudCleanup = "Cloud Cleanup"
     case myTools      = "My Tools"
     case myActivity   = "My Activity"
+    case aiAssistant  = "AI Assistant"
 
     var id: String { rawValue }
 
@@ -59,6 +63,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return "cloud"
         case .myTools:      return "square.stack.3d.up"
         case .myActivity:   return "chart.line.uptrend.xyaxis"
+        case .aiAssistant:  return "sparkles"
         }
     }
 
@@ -74,6 +79,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return "icloud"
         case .myTools:      return "wrench.and.screwdriver"
         case .myActivity:   return "chart.bar"
+        case .aiAssistant:  return "sparkles"
         }
     }
 
@@ -89,6 +95,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return "Clean up your cloud storage and free up space online."
         case .myTools:      return "Your go-to tools for keeping your Mac clean, safe and running smoothly."
         case .myActivity:   return "Track what FreeUp has cleaned and protected over time."
+        case .aiAssistant:  return "Ask AI to scan, clean, and explain what's on your Mac."
         }
     }
 
@@ -104,6 +111,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return []
         case .myTools:      return []
         case .myActivity:   return []
+        case .aiAssistant:  return []
         }
     }
 
@@ -119,6 +127,7 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return [Color(hex:"0a2a3a"),Color(hex:"0d4a6b"),Color(hex:"061825")]
         case .myTools:      return [Color(hex:"1e1535"),Color(hex:"2a1f4a"),Color(hex:"150e28")]
         case .myActivity:   return [Color(hex:"0f0f2e"),Color(hex:"1a1a4a"),Color(hex:"0a0a1e")]
+        case .aiAssistant:  return [Color(hex:"1a0a3e"),Color(hex:"2d1060"),Color(hex:"0f0525")]
         }
     }
 
@@ -134,10 +143,11 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .cloudCleanup: return Color(hex:"38bdf8")
         case .myTools:      return Color(hex:"7b5cf0")
         case .myActivity:   return Color(hex:"7b5cf0")
+        case .aiAssistant:  return Color(hex:"a78bfa")
         }
     }
 
-    var isSeparatorBefore: Bool { self == .myTools }
+    var isSeparatorBefore: Bool { self == .myTools || self == .aiAssistant }
 }
 
 // MARK: - ContentView
@@ -151,15 +161,45 @@ struct ContentView: View {
     var body: some View {
         #if os(macOS)
         ZStack {
-            LinearGradient(colors: selected.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
-                .ignoresSafeArea()
-                .animation(.easeInOut(duration: 0.4), value: selected)
+            PremiumBackground(section: selected)
+                .animation(.easeInOut(duration: 0.45), value: selected)
             HStack(spacing: 0) {
                 sidebarView
                 mainArea
             }
         }
-        .frame(minWidth: 900, minHeight: 580)
+        .frame(minWidth: 1180, minHeight: 760)
+        .onChange(of: engine.lastToolScan) { _, new in
+            guard let title = new else { return }
+            // Map tool title -> app section and show results
+            switch title {
+            case "Malware Finder":
+                selected = .protection
+                showResults = false
+            case "Login Items", "Background Items":
+                selected = .performance
+                showResults = false
+            case "Large and Old Files", "Downloads", "Similar Images", "Duplicate Finder":
+                selected = .myClutter
+                showResults = true
+            case "System Junk", "Privacy Items", "Trash Bins", "Mail Attachments", "App Leftovers", "Uninstaller":
+                selected = .cleanup
+                showResults = true
+            case "Space Lens":
+                selected = .spaceLens
+                showResults = true
+            // Cloud services should remain in Cloud Cleanup section
+            case let s where s.localizedCaseInsensitiveContains("drive") || s.localizedCaseInsensitiveContains("dropbox") || s.localizedCaseInsensitiveContains("cloud"):
+                selected = .cloudCleanup
+                showResults = true
+            case "Full Scan":
+                selected = .smartCare
+                showResults = false
+            default:
+                selected = .cleanup
+                showResults = true
+            }
+        }
         #else
         mobileView
         #endif
@@ -191,17 +231,36 @@ struct ContentView: View {
             }
             Spacer()
         }
-        .frame(width: 210)
-        .background(Color.black.opacity(0.25))
+        .frame(width: 224)
+        .background(
+            LinearGradient(
+                colors: [Color.black.opacity(0.42), Color.black.opacity(0.22)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .overlay(Rectangle().fill(Color.white.opacity(0.08)).frame(width: 1), alignment: .trailing)
     }
 
     // MARK: Main Area
     private var mainArea: some View {
         Group {
             switch selected {
-            case .myTools:      MyToolsView(searchText: $searchText)
+            case .smartCare:
+                SmartCareDashboard(
+                    engine: engine,
+                    onRunSmartCare: runSmartCare,
+                    onOpenSection: { section in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selected = section
+                            showResults = section == .cleanup || section == .myClutter || section == .spaceLens
+                        }
+                    }
+                )
+            case .myTools:      MyToolsView(searchText: $searchText, engine: engine)
             case .myActivity:   MyActivityView()
-            case .cloudCleanup: CloudCleanupView(accentColor: selected.accentColor)
+            case .aiAssistant:  AIAssistantView(engine: engine)
+            case .cloudCleanup: FunctionalCloudCleanupView(accentColor: selected.accentColor, engine: engine)
             case .performance:  PerformanceView(engine: engine)
             case .protection:   ProtectionView(engine: engine)
             case .spaceLens:    SpaceLensView(engine: engine)
@@ -222,38 +281,27 @@ struct ContentView: View {
 
     // MARK: Hero
     private var heroView: some View {
-        HStack(alignment: .center, spacing: 0) {
+        HStack(alignment: .center, spacing: 28) {
             ZStack {
                 if engine.isScanning {
                     ProgressView().scaleEffect(2).tint(.white)
                 } else {
-                    HeroGem(icon: selected.heroIcon, accent: selected.accentColor)
+                    HeroGem(section: selected, accent: selected.accentColor)
                 }
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(selected.rawValue)
-                        .font(.system(size: 36, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text(selected.subtitle)
-                        .font(.system(size: 14))
-                        .foregroundStyle(.white.opacity(0.7))
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: 280)
-                }
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(selected.features, id: \.label) { f in
-                        FeatureRow(icon: f.icon, label: f.label, accent: selected.accentColor)
-                    }
-                }
-                Spacer()
-            }
-            .frame(width: 320)
-            .padding(.trailing, 48)
-            .padding(.top, 80)
+            HeroInfoCard(
+                section: selected,
+                accent: selected.accentColor,
+                scannedBytes: engine.scannedBytes,
+                freedBytes: engine.freedBytes,
+                itemCount: filteredItems.count
+            )
+            .frame(width: 340)
+            .padding(.trailing, 42)
         }
+        .padding(.leading, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -292,8 +340,14 @@ struct ContentView: View {
                 else { Task { await engine.scan(); if !filteredItems.isEmpty { showResults = true } } }
             } label: {
                 ZStack {
-                    Circle().fill(selected.accentColor.opacity(0.35)).frame(width: 72, height: 72)
-                    Circle().fill(selected.accentColor.opacity(0.6)).frame(width: 60, height: 60)
+                    Circle()
+                        .fill(selected.accentColor.opacity(0.18))
+                        .frame(width: 92, height: 92)
+                        .blur(radius: 10)
+                    Circle()
+                        .stroke(LinearGradient(colors: [Color.white.opacity(0.55), selected.accentColor.opacity(0.25)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
+                        .background(Circle().fill(selected.accentColor.opacity(0.72)))
+                        .frame(width: 68, height: 68)
                     if engine.isScanning { ProgressView().tint(.white) }
                     else { Text(showResults ? "Rescan" : "Scan").font(.system(size: 15, weight: .semibold)).foregroundStyle(.white) }
                 }
@@ -301,6 +355,16 @@ struct ContentView: View {
             .buttonStyle(.plain)
             .disabled(engine.isScanning || engine.isClearing)
             .shadow(color: selected.accentColor.opacity(0.6), radius: 16, y: 4)
+        }
+    }
+
+    private func runSmartCare() {
+        Task {
+            await engine.scan()
+            await engine.scanLaunchAgents()
+            await engine.scanLoginItems()
+            showResults = false
+            selected = .smartCare
         }
     }
 
@@ -337,10 +401,350 @@ struct ContentView: View {
     }
 }
 
+// Simple setup chooser for Google Drive (desktop vs web)
+struct GoogleDriveSetupView: View {
+    let accentColor: Color
+    var onChoice: (String) -> Void
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text("Select Google Drive Setup")
+                .font(.system(size: 20, weight: .semibold))
+                .padding(.top, 12)
+
+            VStack(spacing: 12) {
+                Button(action: { onChoice("desktop") }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "desktopcomputer")
+                            .font(.system(size: 28)).foregroundStyle(accentColor)
+                        VStack(alignment: .leading) {
+                            Text("Google Drive via desktop app").font(.headline).foregroundStyle(.primary)
+                            Text("Select this if you use the desktop app to manage your cloud files on this Mac.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding().background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.06)))
+                }
+
+                Button(action: { onChoice("web") }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "globe")
+                            .font(.system(size: 28)).foregroundStyle(accentColor)
+                        VStack(alignment: .leading) {
+                            Text("Google Drive via web app").font(.headline).foregroundStyle(.primary)
+                            Text("Select this if you don't use the desktop app but want to manage your cloud files in the cloud.")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding().background(RoundedRectangle(cornerRadius: 10).fill(Color.white.opacity(0.06)))
+                }
+            }
+            Spacer()
+            HStack { Spacer(); Button("Cancel") { onChoice("") } }
+        }
+        .padding(20)
+        .frame(width: 620, height: 320)
+    }
+}
+
+// MARK: - Smart Care
+
+struct SmartCareDashboard: View {
+    @ObservedObject var engine: CleanerEngine
+    let onRunSmartCare: () -> Void
+    let onOpenSection: (AppSection) -> Void
+
+    private var junkItems: [CleanerEngine.CleanItem] {
+        engine.items.filter { [.userCache, .systemCache, .appSupportCache, .containerCache, .logs, .temp, .xcode, .devTools, .trash, .privacyTrace].contains($0.category) }
+    }
+
+    private var clutterItems: [CleanerEngine.CleanItem] {
+        engine.items.filter { [.largeFile, .downloads].contains($0.category) }
+    }
+
+    private var junkBytes: Int64 {
+        junkItems.reduce(0) { $0 + $1.size }
+    }
+
+    private var hasSmartCareData: Bool {
+        !engine.items.isEmpty || !engine.launchAgents.isEmpty || !engine.loginItems.isEmpty
+    }
+
+    var body: some View {
+        Group {
+            if engine.isScanning || hasSmartCareData {
+                taskDashboard
+            } else {
+                preScanHero
+            }
+        }
+    }
+
+    private var preScanHero: some View {
+        ZStack(alignment: .bottom) {
+            HStack(alignment: .center, spacing: 72) {
+                HeroGem(section: .smartCare, accent: AppSection.smartCare.accentColor)
+                    .frame(maxWidth: .infinity)
+
+                VStack(alignment: .leading, spacing: 28) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Smart Care")
+                            .font(.system(size: 42, weight: .bold))
+                            .foregroundStyle(.white)
+                        Text("Run a full system scan and fix issues automatically.")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.66))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: 360)
+                    }
+
+                    VStack(alignment: .leading, spacing: 18) {
+                        FeatureRow(icon: "sparkles", label: "Smart Scan", accent: AppSection.smartCare.accentColor)
+                        FeatureRow(icon: "shield.checkered", label: "Quick Fix", accent: AppSection.smartCare.accentColor)
+                        FeatureRow(icon: "chart.bar.fill", label: "Health Report", accent: AppSection.smartCare.accentColor)
+                    }
+                }
+                .frame(width: 410, alignment: .leading)
+                .padding(.trailing, 80)
+            }
+            .padding(.leading, 56)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Button {
+                onRunSmartCare()
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(AppSection.smartCare.accentColor.opacity(0.18))
+                        .frame(width: 104, height: 104)
+                        .blur(radius: 12)
+                    Circle()
+                        .stroke(LinearGradient(colors: [Color.white.opacity(0.55), AppSection.smartCare.accentColor.opacity(0.22)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
+                        .background(Circle().fill(AppSection.smartCare.accentColor.opacity(0.78)))
+                        .frame(width: 76, height: 76)
+                    Text("Scan")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
+            .buttonStyle(.plain)
+            .shadow(color: AppSection.smartCare.accentColor.opacity(0.64), radius: 18, y: 6)
+            .padding(.bottom, 34)
+        }
+    }
+
+    private var taskDashboard: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button {
+                    onRunSmartCare()
+                } label: {
+                    Label(engine.isScanning ? "Scanning..." : "Run Smart Care", systemImage: engine.isScanning ? "arrow.triangle.2.circlepath" : "sparkles")
+                }
+                .buttonStyle(SmartCareHeaderButtonStyle())
+                .disabled(engine.isScanning)
+
+                Spacer()
+
+                Text("Smart Care")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.72))
+
+            }
+            .padding(.horizontal, 34)
+            .padding(.top, 26)
+
+            Text(engine.items.isEmpty && engine.launchAgents.isEmpty && engine.loginItems.isEmpty ? "Run one smart scan across cleanup, protection, performance, apps, and clutter." : "Your tasks are ready to run. Look what we found:")
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .padding(.top, 66)
+                .padding(.bottom, 34)
+                .frame(maxWidth: 880)
+
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 18),
+                    GridItem(.flexible(), spacing: 18),
+                    GridItem(.flexible(), spacing: 18)
+                ],
+                spacing: 18
+            ) {
+                SmartCareTaskCard(
+                    title: "Cleanup",
+                    value: junkBytes > 0 ? junkBytes.formatted(.byteCount(style: .file)) + " of junk" : "Ready to scan",
+                    detail: "to clean",
+                    icon: "trash.fill",
+                    accent: Color(hex: "43a047"),
+                    section: .cleanup,
+                    isChecked: !junkItems.isEmpty,
+                    action: onOpenSection
+                )
+
+                SmartCareTaskCard(
+                    title: "Protection",
+                    value: engine.launchAgents.isEmpty ? "No threats" : "\(engine.launchAgents.count) threats",
+                    detail: "to remove",
+                    icon: "hand.raised.fill",
+                    accent: Color(hex: "e91e8c"),
+                    section: .protection,
+                    isChecked: engine.launchAgents.isEmpty && !engine.items.isEmpty,
+                    action: onOpenSection
+                )
+
+                SmartCareTaskCard(
+                    title: "Performance",
+                    value: engine.loginItems.isEmpty ? "Ready to review" : "\(engine.loginItems.count) items",
+                    detail: "to review",
+                    icon: "bolt.fill",
+                    accent: Color(hex: "fb8c00"),
+                    section: .performance,
+                    action: onOpenSection
+                )
+
+                SmartCareTaskCard(
+                    title: "Applications",
+                    value: "No vital updates",
+                    detail: "to install",
+                    icon: "xmark.app.fill",
+                    accent: Color(hex: "2979ff"),
+                    section: .applications,
+                    span: 1.5,
+                    action: onOpenSection
+                )
+
+                SmartCareTaskCard(
+                    title: "My Clutter",
+                    value: clutterItems.isEmpty ? "No duplicate downloads" : "\(clutterItems.count) files",
+                    detail: "to review",
+                    icon: "folder.fill",
+                    accent: Color(hex: "2dd4bf"),
+                    section: .myClutter,
+                    span: 1.5,
+                    action: onOpenSection
+                )
+            }
+            .padding(.horizontal, 34)
+
+            Spacer(minLength: 24)
+        }
+    }
+}
+
+private struct SmartCareTaskCard: View {
+    let title: String
+    let value: String
+    let detail: String
+    let icon: String
+    let accent: Color
+    let section: AppSection
+    var isChecked = false
+    var span: CGFloat = 1
+    let action: (AppSection) -> Void
+
+    var body: some View {
+        Button {
+            action(section)
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                LinearGradient(
+                    colors: [accent.opacity(0.34), Color(hex: "6d28d9").opacity(0.28), Color.black.opacity(0.08)],
+                    startPoint: .topTrailing,
+                    endPoint: .bottomLeading
+                )
+
+                IconShowpiece(icon: icon, accent: accent)
+                    .offset(x: 28, y: -26)
+
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 10) {
+                        if isChecked {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 28, height: 28)
+                                .background(Color.white.opacity(0.16), in: RoundedRectangle(cornerRadius: 8))
+                        }
+
+                        Text(title)
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.72))
+                    }
+
+                    Spacer()
+
+                    Text(value)
+                        .font(.system(size: 31, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                    Text(detail)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.62))
+
+                    HStack {
+                        Spacer()
+                        Text("Review")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.16), in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .opacity(section == .protection && value == "No threats" ? 0 : 1)
+                }
+                .padding(22)
+            }
+            .frame(height: span > 1 ? 214 : 184)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
+            )
+            .shadow(color: accent.opacity(0.20), radius: 24, y: 14)
+        }
+        .buttonStyle(.plain)
+        .gridCellColumns(span > 1 ? 2 : 1)
+    }
+}
+
+private struct IconShowpiece: View {
+    let icon: String
+    let accent: Color
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(LinearGradient(colors: [accent.opacity(0.78), Color.white.opacity(0.22)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 124, height: 112)
+                .rotationEffect(.degrees(-10))
+                .shadow(color: Color.black.opacity(0.26), radius: 16, y: 10)
+            Image(systemName: icon)
+                .font(.system(size: 50, weight: .bold))
+                .foregroundStyle(.white.opacity(0.86))
+                .rotationEffect(.degrees(-10))
+        }
+    }
+}
+
+private struct SmartCareHeaderButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 14, weight: .bold))
+            .foregroundStyle(.white.opacity(0.75))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color.white.opacity(configuration.isPressed ? 0.16 : 0.08), in: Capsule())
+    }
+}
+
 // MARK: - My Tools View
 
 struct MyToolsView: View {
     @Binding var searchText: String
+    @ObservedObject var engine: CleanerEngine
     let columns = [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())]
 
     var filtered: [ToolCard] {
@@ -380,8 +784,8 @@ struct MyToolsView: View {
 
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(filtered) { card in
-                        ToolCardView(card: card)
+                        ForEach(filtered) { card in
+                        ToolCardView(card: card, engine: engine)
                     }
                 }
                 .padding(.horizontal, 28)
@@ -393,6 +797,7 @@ struct MyToolsView: View {
 
 struct ToolCardView: View {
     let card: ToolCard
+    @ObservedObject var engine: CleanerEngine
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -420,6 +825,19 @@ struct ToolCardView: View {
                 .padding(.top, 6)
                 .padding(.horizontal, 20)
 
+            // Per-tool status / last result summary
+            HStack(spacing: 8) {
+                if engine.currentToolScan == card.title {
+                    ProgressView().scaleEffect(0.6).tint(.white)
+                    Text("Scanning...").font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                } else if engine.lastToolScan == card.title {
+                    Text("\(engine.lastToolCount) items found").font(.system(size: 12)).foregroundStyle(.white.opacity(0.7))
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 6)
+
             Spacer(minLength: 16)
 
             HStack {
@@ -437,8 +855,43 @@ struct ToolCardView: View {
                     }
                 }
                 Spacer()
-                Button("Scan") {}
-                    .buttonStyle(CardScanButtonStyle())
+                Button("Scan") {
+                    print("[UI] Tool Scan button tapped: \(card.title)")
+                    switch card.title {
+                    case "Privacy Items":
+                        Task { await engine.scanPrivacyItems() }
+                    case "Large and Old Files":
+                        Task { await engine.scanLargeFiles() }
+                    case "System Junk":
+                        Task { await engine.scanSystemJunk() }
+                    case "Malware Finder":
+                        Task { await engine.scanLaunchAgents() }
+                    case "Login Items":
+                        Task { await engine.scanLoginItems() }
+                    case "Downloads":
+                        Task { await engine.scanDownloads() }
+                    case "App Leftovers":
+                        Task { await engine.scanAppLeftovers() }
+                    case "Trash Bins":
+                        Task { await engine.scanTrash() }
+                    case "Mail Attachments":
+                        Task { await engine.scanMailAttachments() }
+                    case "Time Machine Snapshot":
+                        // No destructive action here; list snapshots if possible via a background task
+                        Task { await engine.scan() }
+                    case "Background Items":
+                        Task { await engine.scanLoginItems() }
+                    case "Application Permissions":
+                        // Permissions are managed via system settings; perform a lightweight scan
+                        Task { await engine.scan() }
+                    case "Similar Images", "Duplicate Finder":
+                        // These require specialized algorithms / location picker; fall back to general scan
+                        Task { await engine.scan() }
+                    default:
+                        Task { await engine.scan() }
+                    }
+                }
+                .buttonStyle(CardScanButtonStyle())
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
@@ -452,18 +905,22 @@ struct ToolCardView: View {
 
 struct CloudCleanupView: View {
     let accentColor: Color
+    @ObservedObject var engine: CleanerEngine
 
-    let services: [(icon: String, color: Color, name: String)] = [
-        ("icloud.fill",    Color(hex:"3b82f6"), "Connect iCloud"),
-        ("g.circle.fill",  Color(hex:"ea4335"), "Connect Google Drive"),
-        ("cloud.fill",     Color(hex:"0078d4"), "Connect OneDrive"),
-        ("drop.fill",      Color(hex:"0061ff"), "Connect Dropbox"),
+    @State private var showingGoogleSetup = false
+    @State private var showingServiceComingSoon: (Bool, String) = (false, "")
+
+    let services: [(service: CleanerEngine.CloudService, icon: String, color: Color, name: String)] = [
+        (.iCloud,   "icloud.fill",   Color(hex:"3b82f6"), "Connect iCloud"),
+        (.googleDrive, "g.circle.fill", Color(hex:"ea4335"), "Connect Google Drive"),
+        (.oneDrive,  "cloud.fill",    Color(hex:"0078d4"), "Connect OneDrive"),
+        (.dropbox,   "drop.fill",     Color(hex:"0061ff"), "Connect Dropbox"),
     ]
 
     var body: some View {
         HStack(alignment: .center, spacing: 0) {
             VStack(spacing: 0) {
-                HeroGem(icon: "icloud", accent: accentColor)
+                HeroGem(section: .cloudCleanup, accent: accentColor)
                 Text("Secure connection")
                     .font(.system(size: 12))
                     .foregroundStyle(.white.opacity(0.5))
@@ -483,7 +940,17 @@ struct CloudCleanupView: View {
                 }
                 VStack(spacing: 12) {
                     ForEach(services, id: \.name) { svc in
-                        Button(action: {}) {
+                        Button(action: {
+                            // For Google Drive prefer showing the setup chooser (desktop vs web)
+                            if svc.service == .googleDrive {
+                                showingGoogleSetup = true
+                                return
+                            }
+                            // Trigger a best-effort local scan of the cloud sync folder
+                            Task {
+                                await engine.scanCloud(svc.service)
+                            }
+                        }) {
                             HStack(spacing: 14) {
                                 Image(systemName: svc.icon)
                                     .font(.system(size: 18))
@@ -493,6 +960,9 @@ struct CloudCleanupView: View {
                                     .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(.white)
                                 Spacer()
+                                if engine.isScanning && engine.currentToolScan == svc.service.displayName {
+                                    ProgressView().tint(.white).scaleEffect(0.8)
+                                }
                             }
                             .padding(.horizontal, 18)
                             .padding(.vertical, 14)
@@ -500,8 +970,54 @@ struct CloudCleanupView: View {
                         }
                         .buttonStyle(.plain)
                         .frame(maxWidth: 280)
+                        .disabled(engine.isScanning)
                     }
                 }
+
+                // Google Drive setup modal (desktop app vs web app)
+                .sheet(isPresented: $showingGoogleSetup) {
+                    GoogleDriveSetupView(accentColor: accentColor) { choice in
+                        // choice: "desktop" or "web"
+                        if choice == "desktop" {
+                            // Present folder picker and scan selected folder
+                            #if os(macOS)
+                            let panel = NSOpenPanel()
+                            panel.canChooseDirectories = true
+                            panel.canChooseFiles = false
+                            panel.allowsMultipleSelection = false
+                            panel.title = "Select your Google Drive folder"
+                            panel.begin { resp in
+                                guard resp == .OK, let url = panel.urls.first else { return }
+                                Task { await engine.scanCloud(folderURL: url, displayName: "Google Drive (custom)") }
+                            }
+                            #endif
+                        } else {
+                            // Web/API flow - not implemented yet; show a temporary message
+                            showingServiceComingSoon = (true, "Google Drive (web)")
+                        }
+                        showingGoogleSetup = false
+                    }
+                }
+
+                // Simple alert for services that require OAuth (placeholder)
+                .alert(isPresented: $showingServiceComingSoon.0) {
+                    Alert(title: Text("Coming soon"), message: Text("Remote/cloud API integration for \(showingServiceComingSoon.1) is not yet implemented. I can implement OAuth flows next if you want."), dismissButton: .default(Text("OK")))
+                }
+
+                // If the engine has results from a cloud scan, show a quick action
+                if !engine.items.isEmpty && engine.lastToolScan?.contains("Drive") == true || engine.lastToolScan == "iCloud Drive" || engine.lastToolScan == "Dropbox" {
+                    HStack {
+                        Text("\(engine.items.count) items · \(engine.scannedBytes.formatted(.byteCount(style: .file)))")
+                            .font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                        Spacer()
+                        Button("Clean All") { Task { await engine.clearAll() } }
+                            .buttonStyle(PillButtonStyle(color: accentColor))
+                            .disabled(engine.isClearing)
+                    }
+                    .frame(maxWidth: 280)
+                    .padding(.top, 8)
+                }
+
                 Spacer()
             }
             .frame(width: 320)
@@ -509,6 +1025,236 @@ struct CloudCleanupView: View {
             .padding(.top, 80)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+struct FunctionalCloudCleanupView: View {
+    let accentColor: Color
+    @ObservedObject var engine: CleanerEngine
+
+    @State private var selectedService: CleanerEngine.CloudService?
+    @State private var selectedFolderName: String?
+
+    private let services: [(service: CleanerEngine.CloudService, icon: String, color: Color, title: String, subtitle: String)] = [
+        (.iCloud, "icloud.fill", Color(hex:"3b82f6"), "iCloud Drive", "Scan local iCloud Drive files"),
+        (.googleDrive, "g.circle.fill", Color(hex:"ea4335"), "Google Drive", "Find large synced Drive files"),
+        (.oneDrive, "cloud.fill", Color(hex:"0078d4"), "OneDrive", "Review local OneDrive storage"),
+        (.dropbox, "drop.fill", Color(hex:"0061ff"), "Dropbox", "Clean synced Dropbox files"),
+    ]
+
+    private var isCloudScan: Bool {
+        guard let lastToolScan = engine.lastToolScan else { return false }
+        return lastToolScan.localizedCaseInsensitiveContains("drive")
+            || lastToolScan.localizedCaseInsensitiveContains("dropbox")
+            || lastToolScan.localizedCaseInsensitiveContains("cloud")
+            || lastToolScan.localizedCaseInsensitiveContains("onedrive")
+            || lastToolScan.localizedCaseInsensitiveContains("icloud")
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            serviceGrid
+
+            if engine.isScanning {
+                scanningState
+            } else if isCloudScan {
+                cloudResults
+            } else {
+                CloudEmptyState(accentColor: accentColor)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Cloud Cleanup")
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundStyle(.white)
+                Text("Scan local cloud sync folders and remove files you no longer need.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.65))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Button {
+                chooseCloudFolder()
+            } label: {
+                Label("Choose Folder", systemImage: "folder.badge.plus")
+            }
+            .buttonStyle(PillButtonStyle(color: accentColor))
+            .disabled(engine.isScanning)
+        }
+        .padding(.horizontal, 32)
+        .padding(.top, 28)
+        .padding(.bottom, 20)
+    }
+
+    private var serviceGrid: some View {
+        HStack(spacing: 16) {
+            ForEach(services, id: \.title) { service in
+                CloudServiceCard(
+                    icon: service.icon,
+                    color: service.color,
+                    title: service.title,
+                    subtitle: service.subtitle,
+                    isSelected: selectedService == service.service,
+                    isScanning: engine.isScanning && engine.currentToolScan == service.service.displayName
+                ) {
+                    selectedService = service.service
+                    selectedFolderName = nil
+                    Task { await engine.scanCloud(service.service) }
+                }
+            }
+        }
+        .padding(.horizontal, 32)
+        .padding(.bottom, 20)
+    }
+
+    private var scanningState: some View {
+        VStack(spacing: 12) {
+            Spacer()
+            ProgressView().tint(.white).scaleEffect(1.5)
+            Text(engine.scanProgress.isEmpty ? "Scanning cloud storage..." : engine.scanProgress)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(0.65))
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var cloudResults: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(engine.items.isEmpty ? "No large cloud files found" : "\(engine.items.count) cloud items found")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text(selectedFolderName ?? engine.lastToolScan ?? "Cloud storage")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.white.opacity(0.52))
+                }
+                Spacer()
+                Text(engine.scannedBytes.formatted(.byteCount(style: .file)))
+                    .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(.white.opacity(0.72))
+                Button("Clean All") {
+                    Task { await engine.clear(items: engine.items) }
+                }
+                .buttonStyle(PillButtonStyle(color: accentColor))
+                .disabled(engine.items.isEmpty || engine.isClearing)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 12)
+
+            if engine.items.isEmpty {
+                Spacer()
+                CloudEmptyState(title: "Cloud storage looks clean", subtitle: "FreeUp did not find cloud files over 10 MB in the selected location.", accentColor: accentColor)
+                Spacer()
+            } else {
+                List(engine.items) { item in
+                    ResultRow(item: item, accent: accentColor)
+                        .listRowBackground(Color.white.opacity(0.05))
+                        .listRowSeparatorTint(.white.opacity(0.1))
+                }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+            }
+        }
+    }
+
+    private func chooseCloudFolder() {
+        #if os(macOS)
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.title = "Choose a cloud folder to scan"
+        panel.message = "Select a local iCloud, Google Drive, OneDrive, Dropbox, or synced cloud folder."
+        panel.begin { response in
+            guard response == .OK, let url = panel.urls.first else { return }
+            selectedService = nil
+            selectedFolderName = url.lastPathComponent
+            Task { await engine.scanCloud(folderURL: url, displayName: url.lastPathComponent) }
+        }
+        #endif
+    }
+}
+
+private struct CloudServiceCard: View {
+    let icon: String
+    let color: Color
+    let title: String
+    let subtitle: String
+    let isSelected: Bool
+    let isScanning: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(color)
+                        .frame(width: 42, height: 42)
+                        .background(color.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Spacer()
+                    if isScanning {
+                        ProgressView().tint(.white).scaleEffect(0.8)
+                    } else if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(color)
+                    }
+                }
+                Text(title)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.white.opacity(0.56))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+            .background(
+                LinearGradient(colors: [Color.white.opacity(isSelected ? 0.16 : 0.09), color.opacity(isSelected ? 0.16 : 0.06)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isSelected ? color.opacity(0.55) : Color.white.opacity(0.12), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isScanning)
+    }
+}
+
+private struct CloudEmptyState: View {
+    var title = "Choose a cloud service"
+    var subtitle = "FreeUp scans local synced cloud folders. For unsynced online-only files, download them or choose the synced folder first."
+    let accentColor: Color
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Spacer()
+            HeroGem(section: .cloudCleanup, accent: accentColor)
+                .scaleEffect(0.62)
+                .frame(height: 210)
+            Text(title)
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(.white)
+            Text(subtitle)
+                .font(.system(size: 13))
+                .foregroundStyle(.white.opacity(0.58))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 440)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
@@ -707,16 +1453,171 @@ struct RecommendationCard: View {
 
 // MARK: - Shared Components
 
+private struct PremiumBackground: View {
+    let section: AppSection
+
+    var body: some View {
+        ZStack {
+            LinearGradient(colors: section.gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(
+                colors: [Color.black.opacity(0.08), Color.black.opacity(0.46)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            Circle()
+                .fill(section.accentColor.opacity(0.28))
+                .frame(width: 420, height: 420)
+                .blur(radius: 70)
+                .offset(x: -260, y: -210)
+            Circle()
+                .fill(Color(hex: "22d3ee").opacity(0.12))
+                .frame(width: 520, height: 520)
+                .blur(radius: 88)
+                .offset(x: 340, y: 250)
+            RadialGrid()
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .frame(width: 620, height: 620)
+                .offset(x: 88, y: 10)
+        }
+        .ignoresSafeArea()
+    }
+}
+
+private struct RadialGrid: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let maxRadius = min(rect.width, rect.height) * 0.48
+
+        for index in 1...5 {
+            let radius = maxRadius * CGFloat(index) / 5
+            path.addEllipse(in: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+        }
+
+        for index in 0..<12 {
+            let angle = CGFloat(index) * .pi / 6
+            let end = CGPoint(x: center.x + cos(angle) * maxRadius, y: center.y + sin(angle) * maxRadius)
+            path.move(to: center)
+            path.addLine(to: end)
+        }
+
+        return path
+    }
+}
+
+private struct HeroInfoCard: View {
+    let section: AppSection
+    let accent: Color
+    let scannedBytes: Int64
+    let freedBytes: Int64
+    let itemCount: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(section.rawValue)
+                    .font(.system(size: 38, weight: .bold))
+                    .foregroundStyle(.white)
+                Text(section.subtitle)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack(spacing: 10) {
+                MetricPill(title: "Found", value: "\(itemCount)", accent: accent)
+                MetricPill(title: "Scanned", value: scannedBytes.formatted(.byteCount(style: .file)), accent: Color(hex: "22d3ee"))
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(section.features, id: \.label) { feature in
+                    FeatureRow(icon: feature.icon, label: feature.label, accent: accent)
+                }
+                if section.features.isEmpty {
+                    FeatureRow(icon: section.heroIcon, label: freedBytes > 0 ? "Recovered \(freedBytes.formatted(.byteCount(style: .file)))" : "Ready for action", accent: accent)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(26)
+        .frame(maxHeight: 420, alignment: .top)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(LinearGradient(colors: [Color.white.opacity(0.16), Color.white.opacity(0.055)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(LinearGradient(colors: [Color.white.opacity(0.34), Color.white.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.28), radius: 34, y: 18)
+    }
+}
+
+private struct MetricPill: View {
+    let title: String
+    let value: String
+    let accent: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white.opacity(0.48))
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(accent.opacity(0.16), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(accent.opacity(0.32), lineWidth: 1))
+    }
+}
+
 private struct SidebarItem: View {
     let section: AppSection
     let isSelected: Bool
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: section.sidebarIcon)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(isSelected ? .white : .white.opacity(0.55))
-                .frame(width: 20)
+            // Use custom FreeUp icons for primary sections; fall back to SF Symbols for anything else
+            Group {
+                if section == .smartCare {
+                    FreeUpLogoView(accent: isSelected ? .white : section.accentColor)
+                        .frame(width: 18, height: 18)
+                } else if section == .protection {
+                    IconShield(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .cleanup {
+                    IconTrash(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .performance {
+                    IconGear(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .applications {
+                    IconFolder(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .myClutter {
+                    IconFolder(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .spaceLens {
+                    IconSparkle(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .cloudCleanup {
+                    IconDownload(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .myTools {
+                    IconGear(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .myActivity {
+                    IconSparkle(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else if section == .aiAssistant {
+                    IconSparkle(accent: isSelected ? .white : section.accentColor).frame(width: 16, height: 16)
+                } else {
+                    Image(systemName: section.sidebarIcon)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(isSelected ? .white : .white.opacity(0.55))
+                        .frame(width: 20)
+                }
+            }
+            .frame(width: 20)
+
             Text(section.rawValue)
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
                 .foregroundStyle(isSelected ? .white : .white.opacity(0.65))
@@ -725,7 +1626,20 @@ private struct SidebarItem: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 7)
         .background(
-            isSelected ? RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.15)) : nil
+            Group {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(LinearGradient(colors: [section.accentColor.opacity(0.34), Color.white.opacity(0.10)], startPoint: .leading, endPoint: .trailing))
+                }
+            }
+        )
+        .overlay(
+            Group {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                }
+            }
         )
         .padding(.horizontal, 10)
         .contentShape(Rectangle())
@@ -733,26 +1647,59 @@ private struct SidebarItem: View {
 }
 
 private struct HeroGem: View {
-    let icon: String
+    let section: AppSection
     let accent: Color
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 60, style: .continuous)
-                .fill(accent.opacity(0.15))
-                .frame(width: 300, height: 300)
-                .blur(radius: 30)
-            RoundedRectangle(cornerRadius: 52, style: .continuous)
-                .fill(LinearGradient(colors: [accent.opacity(0.55), accent.opacity(0.2), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .frame(width: 240, height: 240)
+            Circle()
+                .stroke(AngularGradient(colors: [accent.opacity(0.05), accent.opacity(0.7), Color(hex: "22d3ee").opacity(0.45), accent.opacity(0.05)], center: .center), lineWidth: 2)
+                .frame(width: 360, height: 360)
+                .blur(radius: 0.6)
+            RoundedRectangle(cornerRadius: 82, style: .continuous)
+                .fill(accent.opacity(0.16))
+                .frame(width: 330, height: 330)
+                .blur(radius: 34)
+            RoundedRectangle(cornerRadius: 58, style: .continuous)
+                .fill(LinearGradient(colors: [Color.white.opacity(0.24), accent.opacity(0.42), Color.black.opacity(0.10)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 254, height: 254)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 52, style: .continuous)
-                        .stroke(LinearGradient(colors: [Color.white.opacity(0.4), Color.white.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: 58, style: .continuous)
+                        .stroke(LinearGradient(colors: [Color.white.opacity(0.55), Color.white.opacity(0.08)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1.5)
                 )
-                .shadow(color: accent.opacity(0.5), radius: 40, y: 20)
-            Image(systemName: icon)
-                .font(.system(size: 80, weight: .thin))
-                .foregroundStyle(.white.opacity(0.9))
+                .shadow(color: accent.opacity(0.55), radius: 52, y: 26)
+            Circle()
+                .fill(Color.white.opacity(0.14))
+                .frame(width: 96, height: 96)
+                .blur(radius: 18)
+                .offset(x: -86, y: -88)
+
+            // Use FreeUp custom icons for the main hero when available
+            switch section {
+            case .smartCare:
+                FreeUpLogoView(accent: accent)
+                    .frame(width: 140, height: 140)
+            case .protection:
+                IconShield(accent: .white).frame(width: 120, height: 120)
+            case .cleanup:
+                IconTrash(accent: .white).frame(width: 120, height: 120)
+            case .performance:
+                IconGear(accent: .white).frame(width: 120, height: 120)
+            case .applications:
+                IconFolder(accent: .white).frame(width: 120, height: 120)
+            case .myClutter:
+                IconFolder(accent: .white).frame(width: 120, height: 120)
+            case .spaceLens:
+                IconSparkle(accent: .white).frame(width: 120, height: 120)
+            case .cloudCleanup:
+                IconDownload(accent: .white).frame(width: 120, height: 120)
+            case .myTools:
+                IconGear(accent: .white).frame(width: 120, height: 120)
+            case .myActivity:
+                IconSparkle(accent: .white).frame(width: 120, height: 120)
+            case .aiAssistant:
+                IconSparkle(accent: .white).frame(width: 120, height: 120)
+            }
         }
     }
 }
@@ -765,16 +1712,17 @@ private struct FeatureRow: View {
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(accent.opacity(0.3))
-                    .frame(width: 36, height: 36)
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(LinearGradient(colors: [accent.opacity(0.42), Color.white.opacity(0.10)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 38, height: 38)
+                    .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(Color.white.opacity(0.16), lineWidth: 1))
                 Image(systemName: icon)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
             }
             Text(label)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.white.opacity(0.92))
         }
     }
 }
@@ -1143,3 +2091,4 @@ struct SpaceNodeRow: View {
 }
 
 #Preview { ContentView() }
+

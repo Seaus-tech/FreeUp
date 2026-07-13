@@ -14,7 +14,7 @@ private struct CleanerCardModifier: ViewModifier {
         content
             #if os(macOS)
             .padding(12)
-            .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.06)))
             #elseif os(watchOS)
             .padding(6)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))

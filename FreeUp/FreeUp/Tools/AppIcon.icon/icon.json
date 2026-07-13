@@ -1,0 +1,90 @@
+{
+  "fill" : {
+    "automatic-gradient" : "extended-srgb:0.03000,0.18500,0.25500,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "01-base-glow.svg",
+          "name" : "01 Base Glow"
+        }
+      ],
+      "name" : "01 Depth",
+      "opacity" : 0.92,
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.18
+      }
+    },
+    {
+      "layers" : [
+        {
+          "hidden" : true,
+          "image-name" : "02-storage-lens.svg",
+          "name" : "02 Storage Lens"
+        }
+      ],
+      "name" : "02 Lens",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.35
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.42
+      }
+    },
+    {
+      "layers" : [
+        {
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "03-shield-clean-mark.svg",
+          "name" : "03 Shield Clean Mark"
+        }
+      ],
+      "name" : "03 Action Mark",
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.48
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.22
+      }
+    },
+    {
+      "layers" : [
+        {
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "04-spark-facets.svg",
+          "name" : "04 Spark Facets"
+        }
+      ],
+      "name" : "04 Spark Facets",
+      "opacity" : 0.95,
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.3
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
