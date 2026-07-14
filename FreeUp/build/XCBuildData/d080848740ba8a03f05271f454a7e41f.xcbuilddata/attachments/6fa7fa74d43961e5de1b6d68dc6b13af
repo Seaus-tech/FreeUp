@@ -1,0 +1,66 @@
+{
+  "" : {
+    "const-values" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary.swiftconstvalues",
+    "dependencies" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary.d",
+    "diagnostics" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary.dia",
+    "emit-module-dependencies" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary-emit-module.dia",
+    "pch" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary.swiftdeps"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/AIAssistantView.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/AIAssistantView.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/AIAssistantView.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/AIAssistantView.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/AIService.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/AIService.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/AIService.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/AIService.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/CleanerEngine.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/CleanerEngine.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/CleanerEngine.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/CleanerEngine.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/ContentView.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/ContentView.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/FreeUpApp.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUpApp.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUpApp.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUpApp.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/FreeUpIcons.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUpIcons.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUpIcons.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUpIcons.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/FreeUpLogoView.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUpLogoView.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUpLogoView.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUpLogoView.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/OrganizedClean.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/OrganizedClean.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/OrganizedClean.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/OrganizedClean.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/PlatformExtensions.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/PlatformExtensions.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/PlatformExtensions.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/PlatformExtensions.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/Tools/generate_icns.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/generate_icns.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/generate_icns.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/generate_icns.o"
+  },
+  "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  }
+}

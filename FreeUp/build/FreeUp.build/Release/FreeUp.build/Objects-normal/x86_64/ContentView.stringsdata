@@ -1,0 +1,520 @@
+{
+  "source": "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "%lld items · %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 312
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clean All",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 315
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rescan",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 352
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scan",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 352
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select Google Drive Setup",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 411
+        }
+      },
+      {
+        "comment": "",
+        "key": "Google Drive via desktop app",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 421
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select this if you use the desktop app to manage your cloud files on this Mac.",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 422
+        }
+      },
+      {
+        "comment": "",
+        "key": "Google Drive via web app",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 435
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select this if you don't use the desktop app but want to manage your cloud files in the cloud.",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 436
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 445
+        }
+      },
+      {
+        "comment": "",
+        "key": "Smart Care",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 493
+        }
+      },
+      {
+        "comment": "",
+        "key": "Run a full system scan and fix issues automatically.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 496
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scan",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 527
+        }
+      },
+      {
+        "comment": "",
+        "key": "Run one smart scan across cleanup, protection, performance, apps, and clutter.",
+        "location": {
+          "startingColumn": 101,
+          "startingLine": 559
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your tasks are ready to run. Look what we found:",
+        "location": {
+          "startingColumn": 184,
+          "startingLine": 559
+        }
+      },
+      {
+        "comment": "",
+        "key": "Smart Care",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 551
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scanning...",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 544
+        }
+      },
+      {
+        "comment": "",
+        "key": "Run Smart Care",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 544
+        }
+      },
+      {
+        "comment": "",
+        "key": "Review",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 689
+        }
+      },
+      {
+        "comment": "",
+        "key": "My Tools",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 761
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your go-to tools for keeping your Mac clean, safe and\nrunning smoothly.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 764
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search...",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 772
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scanning...",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 832
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld items found",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 834
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scan",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 858
+        }
+      },
+      {
+        "comment": "",
+        "key": "YashB",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 849
+        }
+      },
+      {
+        "comment": "",
+        "key": "Secure connection",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 924
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cloud Cleanup",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 933
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clean up your cloud storage and free up space online.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 936
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coming soon",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 1004
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remote/cloud API integration for %@ is not yet implemented. I can implement OAuth flows next if you want.",
+        "location": {
+          "startingColumn": 69,
+          "startingLine": 1004
+        }
+      },
+      {
+        "comment": "",
+        "key": "OK",
+        "location": {
+          "startingColumn": 235,
+          "startingLine": 1004
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld items · %@",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1010
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clean All",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 1013
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cloud Cleanup",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1073
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scan local cloud sync folders and remove files you no longer need.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1076
+        }
+      },
+      {
+        "comment": "",
+        "key": "Choose Folder",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 1085
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clean All",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 1143
+        }
+      },
+      {
+        "comment": "",
+        "key": "No large cloud files found",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 1132
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld cloud items found",
+        "location": {
+          "startingColumn": 80,
+          "startingLine": 1132
+        }
+      },
+      {
+        "comment": "",
+        "key": "My Activity",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 1266
+        }
+      },
+      {
+        "comment": "",
+        "key": "5 Recommendations",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1296
+        }
+      },
+      {
+        "comment": "",
+        "key": "View All",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1300
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mac Health:",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 1356
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ of %@ used",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1367
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rescan",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1844
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scan",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 1844
+        }
+      },
+      {
+        "comment": "",
+        "key": "Performance",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1839
+        }
+      },
+      {
+        "comment": "",
+        "key": "Manage what runs at startup to speed up your Mac.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1840
+        }
+      },
+      {
+        "comment": "",
+        "key": "No login items found.",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 1857
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 1872
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rescan",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1905
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scan",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 1905
+        }
+      },
+      {
+        "comment": "",
+        "key": "Protection",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1900
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scan for malware, adware, and suspicious launch agents.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1901
+        }
+      },
+      {
+        "comment": "",
+        "key": "No threats found",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1921
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your Mac looks clean.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1922
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove",
+        "location": {
+          "startingColumn": 40,
+          "startingLine": 1939
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap Scan to check for threats",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1955
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rescan",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 1981
+        }
+      },
+      {
+        "comment": "",
+        "key": "Scan",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 1981
+        }
+      },
+      {
+        "comment": "",
+        "key": "Space Lens",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1976
+        }
+      },
+      {
+        "comment": "",
+        "key": "See what's taking up space on your Mac.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1977
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tap Scan to map your disk",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 2010
+        }
+      }
+    ]
+  },
+  "version": 1
+}

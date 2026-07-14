@@ -1,0 +1,12 @@
+{
+  "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/Tools/generate_icns.swift" : {
+    "abi-baseline-json" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp.abi.json",
+    "const-values" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary.swiftconstvalues",
+    "dependencies" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary.d",
+    "diagnostics" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-primary.dia",
+    "objc-header" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp-Swift.h",
+    "swiftdoc" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp.swiftdoc",
+    "swiftmodule" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp.swiftmodule",
+    "swiftsourceinfo" : "/Users/YashB/Seaus/FreeUp/FreeUp/build/FreeUp.build/Release/FreeUp.build/Objects-normal/arm64/FreeUp.swiftsourceinfo"
+  }
+}

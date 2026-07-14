@@ -1,0 +1,24 @@
+{
+  "source": "/Users/YashB/Seaus/FreeUp/FreeUp/FreeUp/PlatformExtensions.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Scan",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 35
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear All",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 38
+        }
+      }
+    ]
+  },
+  "version": 1
+}
